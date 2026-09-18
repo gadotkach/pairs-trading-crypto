@@ -1,0 +1,52 @@
+name: Pairs Trading Crypto
+
+on:
+  schedule:
+    # Каждый час 24/7 (UTC)
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Fetch fresh prices (HTX + Bybit fallback)
+        run: |
+          python fetch_crypto.py
+
+      - name: Run z_analytics (создаёт analytics_z.xlsx)
+        run: |
+          python z_analytics_crypto.py
+
+      - name: Run pairs_analysis
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT: ${{ secrets.TG_CHAT }}
+          TG_PROXY: ${{ secrets.TG_PROXY }}
+        run: |
+          python pairs_analysis_crypto.py
+
+      - name: Commit state.json, Excel, cache
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state.json pair_strategies_analysis.xlsx analytics_z.xlsx cache/ || true
+          git diff --cached --quiet && echo "Нет изменений — коммит не нужен" || \
+            (git commit -m "Auto update [skip ci]" && git push)
