@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Логи
+*.log
+*.log.*
+
+# Бэкапы
+*.bak
+*.bak_*
+*.bak_before_patch
+
+# .env (секреты)
+.env
+.env.*
+
+# Графики
+z_plots/
+
+# Временные
+notifications_today.txt
