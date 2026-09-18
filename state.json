@@ -1,0 +1,475 @@
+{
+  "excluded_notified": [],
+  "excluded_from_signal": [],
+  "analytics_10": {
+    "NEAR/TRX": {
+      "min_z_10": 3.443,
+      "max_z_10": 71.068,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "NEAR/XCH": {
+      "min_z_10": 0.0398,
+      "max_z_10": 1.7457,
+      "p_max_10": 0.2445,
+      "p_min_10": 0.2445
+    },
+    "AAVE/TRX": {
+      "min_z_10": 186.0977,
+      "max_z_10": 1482.282,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "NEAR/BNB": {
+      "min_z_10": 0.0015,
+      "max_z_10": 0.0151,
+      "p_max_10": 0.0113,
+      "p_min_10": 0.0019
+    },
+    "ICP/AAVE": {
+      "min_z_10": 0.0134,
+      "max_z_10": 0.1704,
+      "p_max_10": 0.1144,
+      "p_min_10": 0.0263
+    },
+    "AAVE/XCH": {
+      "min_z_10": 2.1658,
+      "max_z_10": 94.5469,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "AAVE/NEAR": {
+      "min_z_10": 10.6658,
+      "max_z_10": 134.9655,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "XCH/HBAR": {
+      "min_z_10": 16.2106,
+      "max_z_10": 550.1123,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ICP/NEAR": {
+      "min_z_10": 0.9808,
+      "max_z_10": 4.7403,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ICP/XCH": {
+      "min_z_10": 0.1073,
+      "max_z_10": 1.8728,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "LINK/TRX": {
+      "min_z_10": 22.3145,
+      "max_z_10": 168.5945,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ICP/HBAR": {
+      "min_z_10": 14.8823,
+      "max_z_10": 193.8587,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "AAVE/BTC": {
+      "min_z_10": 0.001,
+      "max_z_10": 0.0038,
+      "p_max_10": 0.0031,
+      "p_min_10": 0.0012
+    },
+    "ADA/TRX": {
+      "min_z_10": 0.4399,
+      "max_z_10": 6.0589,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "NEAR/HBAR": {
+      "min_z_10": 9.8039,
+      "max_z_10": 96.4642,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ADA/NEAR": {
+      "min_z_10": 0.0571,
+      "max_z_10": 0.3564,
+      "p_max_10": 0.084,
+      "p_min_10": 0.084
+    },
+    "ADA/XCH": {
+      "min_z_10": 0.009,
+      "max_z_10": 0.1558,
+      "p_max_10": 0.0734,
+      "p_min_10": 0.0118
+    },
+    "DOT/TRX": {
+      "min_z_10": 2.2548,
+      "max_z_10": 86.5099,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "DOT/XCH": {
+      "min_z_10": 0.1477,
+      "max_z_10": 0.7018,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "AAVE/BNB": {
+      "min_z_10": 0.1023,
+      "max_z_10": 0.5395,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "AAVE/HBAR": {
+      "min_z_10": 717.2094,
+      "max_z_10": 3778.9104,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ADA/AAVE": {
+      "min_z_10": 0.0015,
+      "max_z_10": 0.0069,
+      "p_max_10": 0.0049,
+      "p_min_10": 0.0015
+    },
+    "ICP/BTC": {
+      "min_z_10": 0.0,
+      "max_z_10": 0.0003,
+      "p_max_10": 0.0003,
+      "p_min_10": 0.0
+    },
+    "ICP/BNB": {
+      "min_z_10": 0.0026,
+      "max_z_10": 0.0462,
+      "p_max_10": 0.0444,
+      "p_min_10": 0.0034
+    },
+    "BTC/NEAR": {
+      "min_z_10": 8249.0871,
+      "max_z_10": 70287.6165,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ICP/TRX": {
+      "min_z_10": 6.269,
+      "max_z_10": 165.427,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "LINK/XCH": {
+      "min_z_10": 0.2473,
+      "max_z_10": 8.5446,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "AAVE/ATOM": {
+      "min_z_10": 8.0502,
+      "max_z_10": 94.833,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "XCH/TRX": {
+      "min_z_10": 3.4761,
+      "max_z_10": 384.1686,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "LINK/AAVE": {
+      "min_z_10": 0.047,
+      "max_z_10": 0.2309,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ATOM/TRX": {
+      "min_z_10": 3.7544,
+      "max_z_10": 114.1049,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "DOT/NEAR": {
+      "min_z_10": 0.378,
+      "max_z_10": 3.8749,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "XCH/BNB": {
+      "min_z_10": 0.0018,
+      "max_z_10": 0.147,
+      "p_max_10": 0.0304,
+      "p_min_10": 0.0028
+    },
+    "HBAR/TRX": {
+      "min_z_10": 0.1962,
+      "max_z_10": 1.5139,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ADA/BNB": {
+      "min_z_10": 0.0003,
+      "max_z_10": 0.0025,
+      "p_max_10": 0.0025,
+      "p_min_10": 0.0003
+    },
+    "ETH/NEAR": {
+      "min_z_10": 370.6596,
+      "max_z_10": 2063.6625,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "DOT/AAVE": {
+      "min_z_10": 0.0065,
+      "max_z_10": 0.0901,
+      "p_max_10": 0.0142,
+      "p_min_10": 0.0126
+    },
+    "ATOM/NEAR": {
+      "min_z_10": 0.6374,
+      "max_z_10": 6.7202,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ICP/ETH": {
+      "min_z_10": 0.0008,
+      "max_z_10": 0.0065,
+      "p_max_10": 0.0049,
+      "p_min_10": 0.001
+    },
+    "ICP/LINK": {
+      "min_z_10": 0.1679,
+      "max_z_10": 1.0402,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "LINK/BNB": {
+      "min_z_10": 0.0125,
+      "max_z_10": 0.0711,
+      "p_max_10": 0.0315,
+      "p_min_10": 0.0315
+    },
+    "ADA/BTC": {
+      "min_z_10": 0.0,
+      "max_z_10": 0.0,
+      "p_max_10": 0.0,
+      "p_min_10": 0.0
+    },
+    "LINK/NEAR": {
+      "min_z_10": 1.7266,
+      "max_z_10": 10.5066,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ADA/ICP": {
+      "min_z_10": 0.0319,
+      "max_z_10": 0.2123,
+      "p_max_10": 0.0382,
+      "p_min_10": 0.0382
+    },
+    "BTC/ATOM": {
+      "min_z_10": 3592.7686,
+      "max_z_10": 53771.7192,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "BTC/XCH": {
+      "min_z_10": 965.1265,
+      "max_z_10": 57227.9104,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ICP/ATOM": {
+      "min_z_10": 0.397,
+      "max_z_10": 3.0666,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ETH/XCH": {
+      "min_z_10": 57.0258,
+      "max_z_10": 1798.2372,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "DOT/BTC": {
+      "min_z_10": 0.0,
+      "max_z_10": 0.0002,
+      "p_max_10": 0.0002,
+      "p_min_10": 0.0
+    },
+    "BTC/HBAR": {
+      "min_z_10": 275008.3096,
+      "max_z_10": 1605023.1627,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ATOM/XCH": {
+      "min_z_10": 0.2373,
+      "max_z_10": 1.2229,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ATOM/BNB": {
+      "min_z_10": 0.002,
+      "max_z_10": 0.047,
+      "p_max_10": 0.044,
+      "p_min_10": 0.0025
+    },
+    "ICP/DOT": {
+      "min_z_10": 0.7058,
+      "max_z_10": 3.0213,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ETH/AAVE": {
+      "min_z_10": 8.8402,
+      "max_z_10": 43.1711,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "DOT/BNB": {
+      "min_z_10": 0.0012,
+      "max_z_10": 0.0343,
+      "p_max_10": 0.0095,
+      "p_min_10": 0.0021
+    },
+    "LINK/BTC": {
+      "min_z_10": 0.0001,
+      "max_z_10": 0.0005,
+      "p_max_10": 0.0004,
+      "p_min_10": 0.0001
+    },
+    "ADA/ATOM": {
+      "min_z_10": 0.0336,
+      "max_z_10": 0.2247,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "LINK/ATOM": {
+      "min_z_10": 0.9092,
+      "max_z_10": 7.9391,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ATOM/HBAR": {
+      "min_z_10": 14.9004,
+      "max_z_10": 161.0334,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "BNB/HBAR": {
+      "min_z_10": 1944.3966,
+      "max_z_10": 13063.0441,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "DOT/HBAR": {
+      "min_z_10": 10.9169,
+      "max_z_10": 100.4712,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ADA/ETH": {
+      "min_z_10": 0.0001,
+      "max_z_10": 0.0004,
+      "p_max_10": 0.0004,
+      "p_min_10": 0.0001
+    },
+    "ADA/HBAR": {
+      "min_z_10": 1.9484,
+      "max_z_10": 10.9039,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ETH/TRX": {
+      "min_z_10": 4854.5895,
+      "max_z_10": 35394.0222,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "DOT/LINK": {
+      "min_z_10": 0.0723,
+      "max_z_10": 0.6019,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ETH/ATOM": {
+      "min_z_10": 189.55,
+      "max_z_10": 1688.9247,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "BNB/TRX": {
+      "min_z_10": 1701.544,
+      "max_z_10": 6156.4614,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ADA/LINK": {
+      "min_z_10": 0.0185,
+      "max_z_10": 0.0617,
+      "p_max_10": 0.0254,
+      "p_min_10": 0.0238
+    },
+    "LINK/HBAR": {
+      "min_z_10": 59.2722,
+      "max_z_10": 278.0658,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ETH/HBAR": {
+      "min_z_10": 8875.4805,
+      "max_z_10": 60422.8588,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ETH/DOT": {
+      "min_z_10": 249.3772,
+      "max_z_10": 2992.8753,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ETH/LINK": {
+      "min_z_10": 118.6212,
+      "max_z_10": 259.6377,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "DOT/ATOM": {
+      "min_z_10": 0.4793,
+      "max_z_10": 1.1108,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ADA/DOT": {
+      "min_z_10": 0.0591,
+      "max_z_10": 0.2536,
+      "p_max_10": 0.2156,
+      "p_min_10": 0.2156
+    },
+    "ETH/BNB": {
+      "min_z_10": 2.6334,
+      "max_z_10": 9.9838,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "BTC/BNB": {
+      "min_z_10": 86.9375,
+      "max_z_10": 190.3294,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "BTC/TRX": {
+      "min_z_10": 183976.3764,
+      "max_z_10": 628484.6536,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "ETH/BTC": {
+      "min_z_10": 0.0184,
+      "max_z_10": 0.0623,
+      "p_max_10": null,
+      "p_min_10": null
+    }
+  },
+  "last_update": "2026-09-18T20:51:02.829855"
+}
