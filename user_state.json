@@ -34,7 +34,9 @@
       "priority_pairs": [
         "DOT/XCH"
       ],
-      "keep_only": [],
+      "keep_only": [
+        "DOT/XCH"
+      ],
       "buy_requests_this_month": 0,
       "buy_month": null,
       "level_expires_at": "2999-12-31T23:59:59"
