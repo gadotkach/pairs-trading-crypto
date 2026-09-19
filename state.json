@@ -284,6 +284,12 @@
       "p_max_10": null,
       "p_min_10": null
     },
+    "ETH/AAVE": {
+      "min_z_10": 8.8402,
+      "max_z_10": 43.1711,
+      "p_max_10": null,
+      "p_min_10": null
+    },
     "ETH/XCH": {
       "min_z_10": 57.0258,
       "max_z_10": 1798.2372,
@@ -317,12 +323,6 @@
     "ICP/DOT": {
       "min_z_10": 0.7058,
       "max_z_10": 3.0213,
-      "p_max_10": null,
-      "p_min_10": null
-    },
-    "ETH/AAVE": {
-      "min_z_10": 8.8402,
-      "max_z_10": 43.1711,
       "p_max_10": null,
       "p_min_10": null
     },
@@ -362,17 +362,17 @@
       "p_max_10": null,
       "p_min_10": null
     },
-    "DOT/HBAR": {
-      "min_z_10": 10.9169,
-      "max_z_10": 100.4712,
-      "p_max_10": null,
-      "p_min_10": null
-    },
     "ADA/ETH": {
       "min_z_10": 0.0001,
       "max_z_10": 0.0004,
       "p_max_10": 0.0004,
       "p_min_10": 0.0001
+    },
+    "DOT/HBAR": {
+      "min_z_10": 10.9169,
+      "max_z_10": 100.4712,
+      "p_max_10": null,
+      "p_min_10": null
     },
     "ADA/HBAR": {
       "min_z_10": 1.9484,
@@ -398,17 +398,17 @@
       "p_max_10": null,
       "p_min_10": null
     },
+    "ADA/LINK": {
+      "min_z_10": 0.0169,
+      "max_z_10": 0.0617,
+      "p_max_10": 0.0369,
+      "p_min_10": 0.0238
+    },
     "BNB/TRX": {
       "min_z_10": 1701.544,
       "max_z_10": 6156.4614,
       "p_max_10": null,
       "p_min_10": null
-    },
-    "ADA/LINK": {
-      "min_z_10": 0.0185,
-      "max_z_10": 0.0617,
-      "p_max_10": 0.0369,
-      "p_min_10": 0.0238
     },
     "LINK/HBAR": {
       "min_z_10": 59.2722,
@@ -471,5 +471,5 @@
       "p_min_10": null
     }
   },
-  "last_update": "2026-09-18T23:09:26.692467"
+  "last_update": "2026-09-19T04:07:52.270005"
 }
