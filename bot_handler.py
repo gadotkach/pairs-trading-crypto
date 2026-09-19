@@ -959,26 +959,27 @@ def process_updates(offset=None):
     result = updates.get('result', [])
     max_id = offset
 
-    # Первый запуск без offset — пропускаем всё
+    # Первый запуск без offset — пропускаем всё и запоминаем max_id
     if offset is None and len(result) > 0:
         for upd in result:
             max_id = upd['update_id'] + 1
         print("SKIP old (first run): {}".format(len(result)))
         return max_id
 
-    # Фильтр: только те, что >= offset
+    # Фильтр: только новые (update_id >= offset)
     if offset:
         result = [u for u in result if u.get('update_id', 0) >= offset]
 
-    # Обрабатываем все обновления (но не больше 10)
-    if len(result) > 10:
-        print("Many updates: {}, берём последние 10".format(len(result)))
-        result = result[-10:]
+    # Если накопилось много — обрабатываем только последние 5
+    if len(result) > 5:
+        print("Many updates: {}, обрабатываем последние 5".format(len(result)))
+        result = result[-5:]
 
+    # Обработка
     for upd in result:
         max_id = upd['update_id'] + 1
 
-        # Callback query (inline-кнопки)
+        # Callback query
         if 'callback_query' in upd:
             cb = upd['callback_query']
             user_id = cb['from']['id']
@@ -1002,15 +1003,12 @@ def process_updates(offset=None):
             if len(parts) >= 4 and parts[0] == 'level':
                 level = parts[1]
                 days = int(parts[3])
-
                 from subscription import activate_level
                 activate_level(user_id, level, days)
-
                 send_message(user_id,
                     "[CRYPTO] ⭐ Уровень активирован!\n\n"
                     "Уровень: {}\n"
                     "На {} дней".format(level, days))
-
                 send_message(ADMIN_CHAT_ID,
                     "[CRYPTO] 💰 Оплата\n\n"
                     "👤 User: {}\n"
@@ -1023,8 +1021,7 @@ def process_updates(offset=None):
         if not text:
             continue
 
-        # Reply-кнопки (📊 Данные, 🔍 Проверить, ...)
-        # Reply-кнопка ⭐ Приоритет — отдельная обработка
+        # Reply-кнопки
         if text == '⭐ Приоритет':
             msg_text = format_priority_menu()
             keyboard = priority_levels_keyboard()
@@ -1056,10 +1053,8 @@ def process_updates(offset=None):
             cmd = parts[0].lower()
             args = parts[1:]
 
-            # Админ-команды
             if cmd in ['/gencode', '/activate', '/codes']:
                 response = handle_admin_command(user_id, cmd, args)
-            # /P — меню уровней
             elif cmd == '/p':
                 msg_text = format_priority_menu()
                 keyboard = priority_levels_keyboard()
@@ -1075,8 +1070,6 @@ def process_updates(offset=None):
                 except Exception as e:
                     print("Error: {}".format(e))
                 continue
-
-            # Оплата
             elif cmd in ['/priority', '/superpriority', '/ssuperpriority']:
                 level = cmd.replace('/', '')
                 msg_text = format_pay_menu(level)
@@ -1087,12 +1080,11 @@ def process_updates(offset=None):
                 if not args:
                     response = "[CRYPTO] Отправьте код: /redeem PRIO-2026-XXXX"
                 else:
-                    ok, msg = redeem_code(user_id, args[0])
+                    ok, msg_r = redeem_code(user_id, args[0])
                     if ok:
-                        response = "[CRYPTO] ⭐ " + msg
+                        response = "[CRYPTO] ⭐ " + msg_r
                     else:
-                        response = "[CRYPTO] ❌ " + msg
-            # Остальные
+                        response = "[CRYPTO] ❌ " + msg_r
             elif cmd == '/check':
                 response = handle_check(user_id, args)
             elif cmd == '/find':
@@ -1114,7 +1106,6 @@ def process_updates(offset=None):
             send_message(user_id, trade_msg)
             continue
 
-        # Не понял
         send_message(user_id, "[CRYPTO] ❌ Не понимаю. Используйте /start.")
 
     return max_id
