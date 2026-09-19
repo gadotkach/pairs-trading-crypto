@@ -105,7 +105,7 @@ def check_subscription(user_id):
 
 
 def activate_level(user_id, level, days=30):
-    """Активирует уровень на N дней."""
+    """Активирует уровень на N дней (0 = бесконечный)."""
     if level not in LEVELS:
         return False
 
@@ -114,7 +114,11 @@ def activate_level(user_id, level, days=30):
     if uid not in state['users']:
         state['users'][uid] = {}
 
-    expires = (datetime.now() + timedelta(days=days)).isoformat()
+    if days == 0:
+        expires = "2999-12-31T23:59:59"
+    else:
+        expires = (datetime.now() + timedelta(days=days)).isoformat()
+
     state['users'][uid]['level'] = level
     state['users'][uid]['level_expires_at'] = expires
     save_state(state)
@@ -187,7 +191,13 @@ def redeem_code(user_id, code):
     if uid not in state['users']:
         state['users'][uid] = {}
 
-    expires = (datetime.now() + timedelta(days=days)).isoformat()
+    if days == 0:
+        expires = "2999-12-31T23:59:59"
+        period_str = "∞ (бесконечный)"
+    else:
+        expires = (datetime.now() + timedelta(days=days)).isoformat()
+        period_str = "{} дней".format(days)
+
     state['users'][uid]['level'] = level
     state['users'][uid]['level_expires_at'] = expires
 
@@ -196,7 +206,7 @@ def redeem_code(user_id, code):
 
     save_state(state)
 
-    return True, 'Уровень {} активирован на {} дней.'.format(level, days)
+    return True, 'Уровень {} активирован на {}.'.format(level, period_str)
 
 
 def list_codes():

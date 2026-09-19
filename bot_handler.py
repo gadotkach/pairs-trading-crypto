@@ -1095,7 +1095,7 @@ def handle_admin_command(user_id, cmd, args):
     # /gencode LEVEL [DAYS]
     if cmd == '/gencode':
         if not args:
-            return "[CRYPTO] Формат: /gencode LEVEL [DAYS]\nПример: /gencode priority 30"
+            return "[CRYPTO] Формат: /gencode LEVEL [DAYS]\nПример: /gencode priority 30\nДля бесконечного: /gencode superpriority 0"
         level = args[0].lower()
         days = 30
         if len(args) >= 2:
@@ -1105,9 +1105,16 @@ def handle_admin_command(user_id, cmd, args):
                 pass
         if level not in ['priority', 'superpriority', 'ssuperpriority']:
             return "[CRYPTO] ❌ Неверный уровень. Доступно: priority, superpriority, ssuperpriority."
+
         code = generate_code(level, days)
-        return "[CRYPTO] 🔑 Код создан\n\nКод: {}\nУровень: {}\nПериод: {} дней\n\nПередайте пользователю.".format(
-            code, level, days)
+
+        if days == 0:
+            period_str = "∞ (бесконечный)"
+        else:
+            period_str = "{} дней".format(days)
+
+        return "[CRYPTO] 🔑 Код создан\n\nКод: {}\nУровень: {}\nПериод: {}\n\nПередайте пользователю.".format(
+            code, level, period_str)
 
     # /activate USER_ID LEVEL [DAYS]
     if cmd == '/activate':
