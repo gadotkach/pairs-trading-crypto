@@ -42,3 +42,4 @@ coingecko_cache.json
 
 # User state (создаётся ботом)
 # user_state.json
+last_update_id.txt
