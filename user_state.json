@@ -20,5 +20,14 @@
       "buy_requests_this_month": 0,
       "buy_month": null
     }
+  },
+  "redeem_codes": {
+    "PRIO-2026-619H": {
+      "level": "priority",
+      "days": 30,
+      "created_at": "2026-09-19T11:41:58.385383",
+      "used_by": null,
+      "used_at": null
+    }
   }
 }
