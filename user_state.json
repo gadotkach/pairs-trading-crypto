@@ -32,9 +32,7 @@
         }
       },
       "priority_pairs": [],
-      "keep_only": [
-        "DOT/XCH"
-      ],
+      "keep_only": [],
       "buy_requests_this_month": 0,
       "buy_month": null,
       "level_expires_at": "2999-12-31T23:59:59",
