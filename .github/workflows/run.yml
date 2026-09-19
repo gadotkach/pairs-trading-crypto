@@ -1,9 +1,9 @@
 name: Pairs Trading Crypto
 
 on:
-  schedule:
-    # Каждый час 24/7 (UTC)
-    - cron: '0 * * * *'
+  # Временно отключено
+  # schedule:
+  #   - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:
