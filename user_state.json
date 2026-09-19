@@ -44,7 +44,7 @@
         "DOT/XCH": {
           "step": 12,
           "strategy": "A",
-          "period": "1y"
+          "period": "365d"
         }
       }
     }
