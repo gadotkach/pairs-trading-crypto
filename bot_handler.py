@@ -149,6 +149,26 @@ def pay_menu_keyboard(level):
     return keyboard
 
 
+def main_menu_keyboard(user_id):
+    """Главное меню (inline-кнопки)."""
+    keyboard = {
+        'inline_keyboard': [
+            [
+                {'text': '📊 Данные по паре', 'callback_data': 'menu_pair'},
+                {'text': '🔍 Проверить', 'callback_data': 'menu_check'},
+            ],
+            [
+                {'text': '⭐ Приоритет', 'callback_data': 'menu_priority'},
+                {'text': '📋 Статус', 'callback_data': 'menu_status'},
+            ],
+            [
+                {'text': '❓ Помощь', 'callback_data': 'menu_help'},
+            ],
+        ]
+    }
+    return keyboard
+
+
 def format_pay_menu(level):
     """Меню оплаты для уровня."""
     titles = {
@@ -381,7 +401,8 @@ def format_start(user_id):
     level = user.get('level', 'basic')
 
     msg = "[CRYPTO] 👋 Добро пожаловать!\n\n"
-    msg += "📊 Парный трейдинг: Z = X/Y.\n\n"
+    msg += "📊 Парный трейдинг: Z = X/Y.\n"
+    msg += "Используйте меню ниже.\n\n"
 
     if level == 'basic':
         msg += "🔒 Стандартный доступ:\n"
@@ -521,7 +542,10 @@ def handle_command(user_id, text):
 
     # /start
     if cmd == '/start':
-        return format_start(user_id)
+        msg_text = format_start(user_id)
+        keyboard = main_menu_keyboard(user_id)
+        send_message(user_id, msg_text, reply_markup=keyboard)
+        return None  # Уже отправлено
 
     # /help
     if cmd == '/help':
@@ -1060,6 +1084,22 @@ def format_pay_menu(level):
 # ---------- ОБРАБОТКА CALLBACK ----------
 def handle_callback(user_id, data):
     """Обработка inline-кнопок."""
+    # Главное меню
+    if data == 'menu_pair':
+        return "[CRYPTO] 📊 Введите пару:\n/pair BTC ETH"
+
+    if data == 'menu_check':
+        return "[CRYPTO] 🔍 Введите пару:\n/check BTC ETH"
+
+    if data == 'menu_priority':
+        return None  # Меню оплаты отдельно
+
+    if data == 'menu_status':
+        return format_status(user_id)
+
+    if data == 'menu_help':
+        return format_help(user_id)
+
     # pay_priority_1m
     if data.startswith('pay_'):
         parts = data.split('_')
