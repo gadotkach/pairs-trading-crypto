@@ -43,7 +43,7 @@
       "pair_settings": {
         "DOT/XCH": {
           "step": 12,
-          "strategy": "AB",
+          "strategy": "A",
           "period": "1y"
         }
       }
