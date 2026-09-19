@@ -149,6 +149,37 @@ def pay_menu_keyboard(level):
     return keyboard
 
 
+def reply_main_menu():
+    """Reply-клавиатура (внизу, как на фото)."""
+    keyboard = {
+        'keyboard': [
+            [{'text': '📊 Данные'}, {'text': '🔍 Проверить'}],
+            [{'text': '⭐ Приоритет'}, {'text': '📋 Статус'}],
+            [{'text': '❓ Помощь'}],
+        ],
+        'resize_keyboard': True,
+        'one_time_keyboard': False,
+    }
+    return keyboard
+
+
+def send_message_with_reply_keyboard(chat_id, text):
+    """Отправка с Reply-клавиатурой."""
+    url = "{}/bot{}/sendMessage".format(TG_PROXY, TG_TOKEN)
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": 'HTML',
+        "reply_markup": json.dumps(reply_main_menu()),
+    }
+    try:
+        r = requests.post(url, json=payload, timeout=30)
+        return r.status_code == 200
+    except Exception as e:
+        print("[telegram] error: {}".format(e))
+        return False
+
+
 def main_menu_keyboard(user_id):
     """Главное меню (inline-кнопки)."""
     keyboard = {
@@ -543,9 +574,8 @@ def handle_command(user_id, text):
     # /start
     if cmd == '/start':
         msg_text = format_start(user_id)
-        keyboard = main_menu_keyboard(user_id)
-        send_message(user_id, msg_text, reply_markup=keyboard)
-        return None  # Уже отправлено
+        send_message_with_reply_keyboard(user_id, msg_text)
+        return None
 
     # /help
     if cmd == '/help':
@@ -944,6 +974,17 @@ def process_updates(offset=None):
         text = msg.get('text', '').strip()
         if not text:
             continue
+
+        # Reply-кнопки (📊 Данные, 🔍 Проверить, ...)
+        reply_map = {
+            '📊 Данные': '/pair',
+            '🔍 Проверить': '/check',
+            '⭐ Приоритет': '/priority',
+            '📋 Статус': '/status',
+            '❓ Помощь': '/help',
+        }
+        if text in reply_map:
+            text = reply_map[text]
 
         # Команда?
         if text.startswith('/'):
