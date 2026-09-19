@@ -519,7 +519,9 @@ def format_help(user_id):
     user = get_user(user_id)
     level = user.get('level', 'basic')
 
-    msg = "[CRYPTO] 📋 Справка\n\n"
+    msg = "[CRYPTO] 📋 Справка\n"
+    msg += "Стандартные тикеры для расчета: ADA, ICP, ETH, DOT, LINK, ZRO, AAVE, BTC, ATOM, NEAR, XCH, BNB, HBAR, TRX\n\n"
+
     msg += "📋 Ввод сделки (8 полей):\n"
     msg += "  T1 P1 Q1 C1 T2 P2 Q2 C2\n"
     msg += "  Пример:\n"
@@ -530,24 +532,24 @@ def format_help(user_id):
     msg += "  /help — справка\n"
     msg += "  /status — статус\n"
     msg += "  /pair BTC ETH — данные по паре\n"
-    msg += "  /keep BTC ETH — фильтр (1 пара)\n"
+    msg += "  /keep BTC ETH — фильтр сигналов\n"
 
     if is_priority(user_id):
         msg += "\n📋 Команды (priority):\n"
         msg += "  /check DOT XCH — анализ\n"
-        msg += "  /find BTC [N] — топ-N пар\n"
-        msg += "  /keep ... — фильтр (до 20)\n"
+        msg += "  /find BTC — ТОП-5 пар по доходности\n"
+        msg += "  /keep ... — фильтр (до 20 пар)\n"
 
     if is_super(user_id):
         msg += "\n📋 Команды (superpriority):\n"
-        msg += "  /add BTC NEWCOIN — добавить пару\n"
-        msg += "  /period — период\n"
-        msg += "  /step — шаг\n"
-        msg += "  /strategy — стратегия\n"
+        msg += "  /add BTC NEWCOIN — добавить свою пару, тикер\n"
+        msg += "  /period — изменить период\n"
+        msg += "  /step — изменить шаг\n"
+        msg += "  /strategy — изменить стратегию\n"
 
     if is_ss(user_id):
         msg += "\n📋 Команды (ssuperpriority):\n"
-        msg += "  /buy BTC — рекомендованная цена (2/мес)\n"
+        msg += "  /buy BTC — лучшее значение цены входа (2/мес)\n"
 
     return msg
 
