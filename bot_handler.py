@@ -1136,22 +1136,61 @@ def save_offset(offset):
             f.write(str(offset))
 
 
-if __name__ == '__main__':
-    print("Bot: single poll...")
-    offset = load_offset()
-    print("Offset: {}".format(offset))
-    try:
-        new_offset = process_updates(offset)
-        save_offset(new_offset)
-        print("New offset: {}".format(new_offset))
-    except Exception as e:
-        print("Error: {}".format(e))
-        import traceback
-        traceback.print_exc()
-    print("Bot: done.")
+def handle_admin_command(user_id, cmd, args):
+    """Обработка админ-команд."""
+    if not is_admin(user_id):
+        return "[CRYPTO] ❌ Только для админа."
+
+    # /gencode LEVEL [DAYS]
+    if cmd == '/gencode':
+        if not args:
+            return "[CRYPTO] Формат: /gencode LEVEL [DAYS]\nПример: /gencode priority 30"
+        level = args[0].lower()
+        days = 30
+        if len(args) >= 2:
+            try:
+                days = int(args[1])
+            except ValueError:
+                pass
+        if level not in ['priority', 'superpriority', 'ssuperpriority']:
+            return "[CRYPTO] ❌ Неверный уровень. Доступно: priority, superpriority, ssuperpriority."
+        code = generate_code(level, days)
+        return "[CRYPTO] 🔑 Код создан\n\nКод: {}\nУровень: {}\nПериод: {} дней\n\nПередайте пользователю.".format(
+            code, level, days)
+
+    # /activate USER_ID LEVEL [DAYS]
+    if cmd == '/activate':
+        if len(args) < 2:
+            return "[CRYPTO] Формат: /activate USER_ID LEVEL [DAYS]"
+        target_id = args[0]
+        level = args[1].lower()
+        days = 30
+        if len(args) >= 3:
+            try:
+                days = int(args[2])
+            except ValueError:
+                pass
+        if level not in SUB_LEVELS:
+            return "[CRYPTO] ❌ Неверный уровень."
+        activate_level(target_id, level, days)
+        send_message(target_id, "[CRYPTO] ⭐ Уровень активирован: {} на {} дней.".format(level, days))
+        return "[CRYPTO] ✅ Активирован {} → {} ({})".format(target_id, level, days)
+
+    # /codes
+    if cmd == '/codes':
+        codes = list_codes()
+        if not codes:
+            return "[CRYPTO] Нет кодов."
+        msg = "[CRYPTO] 🔑 Коды ({}):\n\n".format(len(codes))
+        for code, info in list(codes.items())[-10:]:
+            used = "✅ использован" if info.get('used_by') else "🔓 активен"
+            msg += "{}  {}  {}д  {}\n".format(code, info['level'], info['days'], used)
+        return msg
+
+    return None
 
 
-# ---------- ОПЛАТА (STARS) ----------
+
 def send_invoice_stars(chat_id, level, period):
     """Отправляет инвойс Stars."""
     price = STARS_PRICES.get((level, period), 0)
@@ -1183,27 +1222,6 @@ def send_invoice_stars(chat_id, level, period):
         return False
 
 
-def format_pay_menu(level):
-    """Меню оплаты для уровня."""
-    titles = {
-        'priority': '⭐ Priority',
-        'superpriority': '⭐⭐ Superpriority',
-        'ssuperpriority': '⭐⭐⭐ SSuperpriority',
-    }
-
-    msg = "[CRYPTO] {} доступ\n\n".format(titles.get(level, level))
-    msg += "Выберите период:\n\n"
-
-    p1m = STARS_PRICES.get((level, '1m'), 0)
-    p1y = STARS_PRICES.get((level, '1y'), 0)
-
-    msg += "📅 1 месяц — {} ⭐\n".format(p1m)
-    msg += "📅 1 год — {} ⭐ (-20%)\n".format(p1y)
-    msg += "\nВыберите или /redeem CODE"
-    return msg
-
-
-# ---------- ОБРАБОТКА CALLBACK ----------
 def handle_callback(user_id, data):
     """Обработка inline-кнопок."""
     # Главное меню
@@ -1288,57 +1306,20 @@ def handle_callback(user_id, data):
 
 
 # ---------- АДМИН-КОМАНДЫ ----------
-def handle_admin_command(user_id, cmd, args):
-    """Обработка админ-команд."""
-    if not is_admin(user_id):
-        return "[CRYPTO] ❌ Только для админа."
 
-    # /gencode LEVEL [DAYS]
-    if cmd == '/gencode':
-        if not args:
-            return "[CRYPTO] Формат: /gencode LEVEL [DAYS]\nПример: /gencode priority 30"
-        level = args[0].lower()
-        days = 30
-        if len(args) >= 2:
-            try:
-                days = int(args[1])
-            except ValueError:
-                pass
-        if level not in ['priority', 'superpriority', 'ssuperpriority']:
-            return "[CRYPTO] ❌ Неверный уровень. Доступно: priority, superpriority, ssuperpriority."
-        code = generate_code(level, days)
-        return "[CRYPTO] 🔑 Код создан\n\nКод: {}\nУровень: {}\nПериод: {} дней\n\nПередайте пользователю.".format(
-            code, level, days)
-
-    # /activate USER_ID LEVEL [DAYS]
-    if cmd == '/activate':
-        if len(args) < 2:
-            return "[CRYPTO] Формат: /activate USER_ID LEVEL [DAYS]"
-        target_id = args[0]
-        level = args[1].lower()
-        days = 30
-        if len(args) >= 3:
-            try:
-                days = int(args[2])
-            except ValueError:
-                pass
-        if level not in SUB_LEVELS:
-            return "[CRYPTO] ❌ Неверный уровень."
-        activate_level(target_id, level, days)
-        send_message(target_id, "[CRYPTO] ⭐ Уровень активирован: {} на {} дней.".format(level, days))
-        return "[CRYPTO] ✅ Активирован {} → {} ({})".format(target_id, level, days)
-
-    # /codes
-    if cmd == '/codes':
-        codes = list_codes()
-        if not codes:
-            return "[CRYPTO] Нет кодов."
-        msg = "[CRYPTO] 🔑 Коды ({}):\n\n".format(len(codes))
-        for code, info in list(codes.items())[-10:]:
-            used = "✅ использован" if info.get('used_by') else "🔓 активен"
-            msg += "{}  {}  {}д  {}\n".format(code, info['level'], info['days'], used)
-        return msg
-
-    return None
+if __name__ == '__main__':
+    print("Bot: single poll...")
+    offset = load_offset()
+    print("Offset: {}".format(offset))
+    try:
+        new_offset = process_updates(offset)
+        save_offset(new_offset)
+        print("New offset: {}".format(new_offset))
+    except Exception as e:
+        print("Error: {}".format(e))
+        import traceback
+        traceback.print_exc()
+    print("Bot: done.")
 
 
+# ---------- ОПЛАТА (STARS) ----------
