@@ -31,22 +31,14 @@
           "level_Y": null
         }
       },
-      "priority_pairs": [
-        "DOT/XCH"
-      ],
+      "priority_pairs": [],
       "keep_only": [
         "DOT/XCH"
       ],
       "buy_requests_this_month": 0,
       "buy_month": null,
       "level_expires_at": "2999-12-31T23:59:59",
-      "pair_settings": {
-        "DOT/XCH": {
-          "step": 12,
-          "strategy": "A",
-          "period": "365d"
-        }
-      }
+      "pair_settings": {}
     }
   },
   "redeem_codes": {
