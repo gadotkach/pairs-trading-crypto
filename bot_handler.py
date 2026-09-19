@@ -164,11 +164,11 @@ def format_pay_menu(level):
 
 def get_updates(offset=None):
     url = "{}/bot{}/getUpdates".format(TG_PROXY, TG_TOKEN)
-    params = {'timeout': 30}
+    params = {'timeout': 5}
     if offset:
         params['offset'] = offset
     try:
-        r = requests.get(url, params=params, timeout=60)
+        r = requests.get(url, params=params, timeout=15)
         if r.status_code == 200:
             return r.json()
     except Exception as e:
@@ -964,13 +964,34 @@ def process_updates(offset=None):
     return max_id
 
 
+def load_offset():
+    if os.path.exists('last_update_id.txt'):
+        try:
+            with open('last_update_id.txt', 'r') as f:
+                return int(f.read().strip())
+        except Exception:
+            pass
+    return None
+
+
+def save_offset(offset):
+    if offset:
+        with open('last_update_id.txt', 'w') as f:
+            f.write(str(offset))
+
+
 if __name__ == '__main__':
-    # Один проход (для GitHub Actions)
     print("Bot: single poll...")
+    offset = load_offset()
+    print("Offset: {}".format(offset))
     try:
-        process_updates()
+        new_offset = process_updates(offset)
+        save_offset(new_offset)
+        print("New offset: {}".format(new_offset))
     except Exception as e:
         print("Error: {}".format(e))
+        import traceback
+        traceback.print_exc()
     print("Bot: done.")
 
 
