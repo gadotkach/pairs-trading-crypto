@@ -11,6 +11,11 @@ from tickers import (
     add_extended_ticker, parse_pair, parse_pairs, pair_to_str
 )
 from finance_api import check_ticker
+from subscription import (
+    STARS_PRICES, PERIOD_DAYS, LEVELS as SUB_LEVELS,
+    check_subscription, activate_level, get_subscription_info,
+    generate_code, redeem_code, list_codes
+)
 
 # ---------- КОНФИГ ----------
 TG_PROXY = os.environ.get("TG_PROXY", "https://tg-proxy.shvaboe.workers.dev")
@@ -90,34 +95,71 @@ def set_user_field(user_id, field, value):
 
 
 def is_priority(user_id):
-    user = get_user(user_id)
-    return user['level'] in ['priority', 'superpriority', 'ssuperpriority']
+    return check_subscription(user_id) in ['priority', 'superpriority', 'ssuperpriority']
 
 
 def is_super(user_id):
-    user = get_user(user_id)
-    return user['level'] in ['superpriority', 'ssuperpriority']
+    return check_subscription(user_id) in ['superpriority', 'ssuperpriority']
 
 
 def is_ss(user_id):
-    user = get_user(user_id)
-    return user['level'] == 'ssuperpriority'
+    return check_subscription(user_id) == 'ssuperpriority'
+
+
+def is_admin(user_id):
+    return str(user_id) == str(ADMIN_CHAT_ID)
 
 
 # ---------- TELEGRAM ----------
-def send_message(chat_id, text, parse_mode='HTML'):
+def send_message(chat_id, text, parse_mode='HTML', reply_markup=None):
     url = "{}/bot{}/sendMessage".format(TG_PROXY, TG_TOKEN)
     payload = {
         "chat_id": chat_id,
         "text": text,
         "parse_mode": parse_mode,
     }
+    if reply_markup:
+        payload['reply_markup'] = json.dumps(reply_markup)
     try:
         r = requests.post(url, json=payload, timeout=30)
         return r.status_code == 200
     except Exception as e:
         print("[telegram] error: {}".format(e))
         return False
+
+
+def pay_menu_keyboard(level):
+    """Inline-кнопки для меню оплаты."""
+    p1m = STARS_PRICES.get((level, '1m'), 0)
+    p1y = STARS_PRICES.get((level, '1y'), 0)
+
+    keyboard = {
+        'inline_keyboard': [
+            [
+                {'text': '📅 1 месяц — {} ⭐'.format(p1m), 'callback_data': 'pay_{}_1m'.format(level)},
+            ],
+            [
+                {'text': '📅 1 год — {} ⭐ (-20%)'.format(p1y), 'callback_data': 'pay_{}_1y'.format(level)},
+            ],
+            [
+                {'text': '🔑 У меня есть код', 'callback_data': 'redeem_start'},
+            ],
+        ]
+    }
+    return keyboard
+
+
+def format_pay_menu(level):
+    """Меню оплаты для уровня."""
+    titles = {
+        'priority': '⭐ Priority',
+        'superpriority': '⭐⭐ Superpriority',
+        'ssuperpriority': '⭐⭐⭐ SSuperpriority',
+    }
+
+    msg = "[CRYPTO] {} доступ\n\n".format(titles.get(level, level))
+    msg += "Выберите период:"
+    return msg
 
 
 def get_updates(offset=None):
@@ -824,8 +866,44 @@ def process_updates(offset=None):
     for upd in result:
         max_id = upd['update_id'] + 1
 
+        # Callback query (inline-кнопки)
+        if 'callback_query' in upd:
+            cb = upd['callback_query']
+            user_id = cb['from']['id']
+            data = cb.get('data', '')
+            response = handle_callback(user_id, data)
+            if response:
+                send_message(user_id, response)
+            continue
+
         msg = upd.get('message')
         if not msg:
+            continue
+
+        # Успешная оплата
+        if 'successful_payment' in msg:
+            user_id = msg['from']['id']
+            payment = msg['successful_payment']
+            payload = payment.get('invoice_payload', '')
+
+            parts = payload.split('_')
+            if len(parts) >= 4 and parts[0] == 'level':
+                level = parts[1]
+                days = int(parts[3])
+
+                from subscription import activate_level
+                activate_level(user_id, level, days)
+
+                send_message(user_id,
+                    "[CRYPTO] ⭐ Уровень активирован!\n\n"
+                    "Уровень: {}\n"
+                    "На {} дней".format(level, days))
+
+                send_message(ADMIN_CHAT_ID,
+                    "[CRYPTO] 💰 Оплата\n\n"
+                    "👤 User: {}\n"
+                    "⭐ Уровень: {}\n"
+                    "📅 {} дней".format(user_id, level, days))
             continue
 
         user_id = msg['from']['id']
@@ -839,7 +917,27 @@ def process_updates(offset=None):
             cmd = parts[0].lower()
             args = parts[1:]
 
-            if cmd == '/check':
+            # Админ-команды
+            if cmd in ['/gencode', '/activate', '/codes']:
+                response = handle_admin_command(user_id, cmd, args)
+            # Оплата
+            elif cmd in ['/priority', '/superpriority', '/ssuperpriority']:
+                level = cmd.replace('/', '')
+                msg_text = format_pay_menu(level)
+                keyboard = pay_menu_keyboard(level)
+                send_message(user_id, msg_text, reply_markup=keyboard)
+                continue
+            elif cmd == '/redeem':
+                if not args:
+                    response = "[CRYPTO] Отправьте код: /redeem PRIO-2026-XXXX"
+                else:
+                    ok, msg = redeem_code(user_id, args[0])
+                    if ok:
+                        response = "[CRYPTO] ⭐ " + msg
+                    else:
+                        response = "[CRYPTO] ❌ " + msg
+            # Остальные
+            elif cmd == '/check':
                 response = handle_check(user_id, args)
             elif cmd == '/find':
                 response = handle_find(user_id, args)
@@ -874,3 +972,131 @@ if __name__ == '__main__':
     except Exception as e:
         print("Error: {}".format(e))
     print("Bot: done.")
+
+
+# ---------- ОПЛАТА (STARS) ----------
+def send_invoice_stars(chat_id, level, period):
+    """Отправляет инвойс Stars."""
+    price = STARS_PRICES.get((level, period), 0)
+    if price <= 0:
+        return False
+
+    days = PERIOD_DAYS.get(period, 30)
+    titles = {
+        'priority': 'Priority',
+        'superpriority': 'Superpriority',
+        'ssuperpriority': 'SSuperpriority',
+    }
+    period_label = '1 месяц' if period == '1m' else '1 год'
+
+    url = "{}/bot{}/sendInvoice".format(TG_PROXY, TG_TOKEN)
+    payload = {
+        "chat_id": chat_id,
+        "title": "{} — {}".format(titles[level], period_label),
+        "description": "Активация уровня {} на {}".format(level, period_label),
+        "payload": "level_{}_{}_{}".format(level, period, days),
+        "currency": "XTR",
+        "prices": [{"label": titles[level], "amount": price}],
+    }
+    try:
+        r = requests.post(url, json=payload, timeout=30)
+        return r.status_code == 200
+    except Exception as e:
+        print("[invoice] error: {}".format(e))
+        return False
+
+
+def format_pay_menu(level):
+    """Меню оплаты для уровня."""
+    titles = {
+        'priority': '⭐ Priority',
+        'superpriority': '⭐⭐ Superpriority',
+        'ssuperpriority': '⭐⭐⭐ SSuperpriority',
+    }
+
+    msg = "[CRYPTO] {} доступ\n\n".format(titles.get(level, level))
+    msg += "Выберите период:\n\n"
+
+    p1m = STARS_PRICES.get((level, '1m'), 0)
+    p1y = STARS_PRICES.get((level, '1y'), 0)
+
+    msg += "📅 1 месяц — {} ⭐\n".format(p1m)
+    msg += "📅 1 год — {} ⭐ (-20%)\n".format(p1y)
+    msg += "\nВыберите или /redeem CODE"
+    return msg
+
+
+# ---------- ОБРАБОТКА CALLBACK ----------
+def handle_callback(user_id, data):
+    """Обработка inline-кнопок."""
+    # pay_priority_1m
+    if data.startswith('pay_'):
+        parts = data.split('_')
+        if len(parts) >= 3:
+            level = parts[1]
+            period = parts[2]  # '1m' или '1y'
+            send_invoice_stars(user_id, level, period)
+        return None
+
+    # redeem_start
+    if data == 'redeem_start':
+        return "[CRYPTO] Отправьте код:\n/redeem PRIO-2026-XXXX"
+
+    return None
+
+
+# ---------- АДМИН-КОМАНДЫ ----------
+def handle_admin_command(user_id, cmd, args):
+    """Обработка админ-команд."""
+    if not is_admin(user_id):
+        return "[CRYPTO] ❌ Только для админа."
+
+    # /gencode LEVEL [DAYS]
+    if cmd == '/gencode':
+        if not args:
+            return "[CRYPTO] Формат: /gencode LEVEL [DAYS]\nПример: /gencode priority 30"
+        level = args[0].lower()
+        days = 30
+        if len(args) >= 2:
+            try:
+                days = int(args[1])
+            except ValueError:
+                pass
+        if level not in ['priority', 'superpriority', 'ssuperpriority']:
+            return "[CRYPTO] ❌ Неверный уровень. Доступно: priority, superpriority, ssuperpriority."
+        code = generate_code(level, days)
+        return "[CRYPTO] 🔑 Код создан\n\nКод: {}\nУровень: {}\nПериод: {} дней\n\nПередайте пользователю.".format(
+            code, level, days)
+
+    # /activate USER_ID LEVEL [DAYS]
+    if cmd == '/activate':
+        if len(args) < 2:
+            return "[CRYPTO] Формат: /activate USER_ID LEVEL [DAYS]"
+        target_id = args[0]
+        level = args[1].lower()
+        days = 30
+        if len(args) >= 3:
+            try:
+                days = int(args[2])
+            except ValueError:
+                pass
+        if level not in SUB_LEVELS:
+            return "[CRYPTO] ❌ Неверный уровень."
+        activate_level(target_id, level, days)
+        send_message(target_id, "[CRYPTO] ⭐ Уровень активирован: {} на {} дней.".format(level, days))
+        return "[CRYPTO] ✅ Активирован {} → {} ({})".format(target_id, level, days)
+
+    # /codes
+    if cmd == '/codes':
+        codes = list_codes()
+        if not codes:
+            return "[CRYPTO] Нет кодов."
+        msg = "[CRYPTO] 🔑 Коды ({}):\n\n".format(len(codes))
+        for code, info in list(codes.items())[-10:]:
+            used = "✅ использован" if info.get('used_by') else "🔓 активен"
+            msg += "{}  {}  {}д  {}\n".format(code, info['level'], info['days'], used)
+        return msg
+
+    return None
+
+
