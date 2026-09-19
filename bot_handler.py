@@ -519,37 +519,81 @@ def format_help(user_id):
     user = get_user(user_id)
     level = user.get('level', 'basic')
 
-    msg = "[CRYPTO] 📋 Справка\n"
-    msg += "Стандартные тикеры для расчета: ADA, ICP, ETH, DOT, LINK, ZRO, AAVE, BTC, ATOM, NEAR, XCH, BNB, HBAR, TRX\n\n"
+    msg = "[CRYPTO] 📋 Справка\n\n"
 
-    msg += "📋 Ввод сделки для анализа (8 полей):\n"
-    msg += "<code>T1 P1 Q1 C1 T2 P2 Q2 C2</code>\n"
-    msg += "Пример:\n"
-    msg += "<code>DOT 1.1316 44.3566 0.10038 XCH 1.5045 33.2957 0.0665</code>\n\n"
+    msg += "Стандартные тикеры для расчета:\n"
+    msg += "ADA, ICP, ETH, DOT, LINK, ZRO, AAVE, BTC, ATOM, NEAR, XCH, BNB, HBAR, TRX\n\n"
 
-    msg += "📋 Команды (базовые):\n"
+    # Краткие описания
+    msg += "📋 Команды (кратко):\n"
     msg += "  /start — приветствие\n"
     msg += "  /help — справка\n"
-    msg += "  /status — статус\n"
+    msg += "  /status — статус + стратегии\n"
     msg += "  /pair BTC ETH — данные по паре\n"
-    msg += "  /keep BTC ETH — фильтр сигналов\n"
+    msg += "  /trade — ввод сделки + подписка\n"
 
     if is_priority(user_id):
-        msg += "\n📋 Команды (priority):\n"
-        msg += "  /check DOT XCH — анализ\n"
-        msg += "  /find BTC — ТОП-5 пар по доходности\n"
-        msg += "  /keep ... — фильтр (до 20 пар)\n"
+        msg += "  /filter — мои пары\n"
+        msg += "  /check BTC ETH — анализ\n"
+        msg += "  /find BTC — ТОП-5\n"
+        msg += "  /keep BTC ETH — фильтр\n"
+        msg += "  /clear BTC SOL — удалить из фильтра\n"
+        msg += "  /remove BTC ETH — удалить из рассылки\n"
 
     if is_super(user_id):
-        msg += "\n📋 Команды (superpriority):\n"
-        msg += "  /add BTC NEWCOIN — добавить свою пару, тикер\n"
-        msg += "  /period — изменить период\n"
-        msg += "  /step — изменить шаг\n"
-        msg += "  /strategy — изменить стратегию\n"
+        msg += "  /add BTC NEWCOIN — добавить пару\n"
+        msg += "  /step BTC ETH 12 — шаг для пары\n"
+        msg += "  /strategy BTC ETH A — стратегия\n"
+        msg += "  /period BTC ETH 1y — период\n"
 
     if is_ss(user_id):
-        msg += "\n📋 Команды (ssuperpriority):\n"
-        msg += "  /buy BTC — лучшее значение цены входа (2/мес)\n"
+        msg += "  /buy BTC — цена входа (2/мес)\n"
+
+    # Подробные описания
+    msg += "\n━━━ Подробно ━━━\n"
+
+    msg += "\n📋 /trade — ввод сделки + подписка:\n"
+    msg += "  /trade T1 P1 Q1 C1 T2 P2 Q2 C2\n"
+    msg += "  T1 — тикер 1 (например, ETH)\n"
+    msg += "  P1 — цена 1\n"
+    msg += "  Q1 — количество 1\n"
+    msg += "  C1 — комиссия 1\n"
+    msg += "  T2 — тикер 2\n"
+    msg += "  P2 — цена 2\n"
+    msg += "  Q2 — количество 2\n"
+    msg += "  C2 — комиссия 2\n"
+    msg += "  Пример:\n"
+    msg += "  /trade DOT 1.1316 44.3566 0.10038 XCH 1.5045 33.2957 0.0665\n"
+
+    msg += "\n📋 /pair BTC ETH — данные по паре:\n"
+    msg += "  Z, sminZ, smaxZ, Pmin/Pmax, сделки, доходность\n"
+    msg += "  где P — границы коридора\n"
+
+    if is_priority(user_id):
+        msg += "\n📋 /keep BTC ETH — фильтр:\n"
+        msg += "  /keep BTC ETH — только BTC/ETH\n"
+        msg += "  /keep BTC ETH ADA SOL — 2 пары\n"
+        msg += "  /clear — сбросить все\n"
+        msg += "  /clear BTC SOL — удалить пару\n"
+
+        msg += "\n📋 /check BTC ETH — разовый анализ:\n"
+        msg += "  → перелив X↔Y, стратегии A/B\n"
+
+        msg += "\n📋 /remove BTC ETH — удалить из рассылки\n"
+
+    if is_super(user_id):
+        msg += "\n📋 /step BTC ETH 12 — шаг для пары:\n"
+        msg += "  /step BTC ETH 5, 10, 12 (любой)\n"
+
+        msg += "\n📋 /strategy BTC ETH A — стратегия:\n"
+        msg += "  A — перелив всегда\n"
+        msg += "  B — только если инструмент вырос\n"
+        msg += "  AB — обе (по умолчанию)\n"
+
+        msg += "\n📋 /period BTC ETH 1y — период:\n"
+        msg += "  /period BTC ETH 1y — 1 год\n"
+        msg += "  /period BTC ETH 365d — 365 дней\n"
+        msg += "  /period BTC ETH 01-01-2024 19-09-2026 — даты\n"
 
     return msg
 
@@ -567,35 +611,49 @@ def format_status(user_id):
     msg += "📅 Период: {} {}\n".format(
         period.get('type', 'years'), period.get('value', 1))
 
-    msg += "\n📋 Рассылки:\n"
-    subs = user.get('subscriptions', {})
-    for k, v in subs.items():
-        msg += "  • {}: {}\n".format(k, "✅" if v else "❌")
+    # Подписка
+    expires = user.get('level_expires_at')
+    if expires:
+        msg += "📅 Действует до: {}\n".format(expires[:10])
 
+    # Сделки / подписки
     trades = user.get('trades', {})
     if trades:
         msg += "\n📋 Сделки ({}):\n".format(len(trades))
         for pair in trades:
-            msg += "  • {}\n".format(pair)
+            t = trades[pair]
+            msg += "  • {} ({})\n".format(pair, t.get('date', '?'))
 
+    # Приоритетные (рассылка)
     pp = user.get('priority_pairs', [])
     if pp:
-        msg += "\n📋 Приоритетные ({}):\n".format(len(pp))
+        msg += "\n📋 Рассылка ({}):\n".format(len(pp))
         for p in pp:
-            msg += "  • {}\n".format(p)
+            if isinstance(p, dict):
+                msg += "  • {} (STEP {}%, {})\n".format(
+                    p.get('pair'), p.get('step', 5), p.get('strategy', 'AB'))
+            else:
+                msg += "  • {}\n".format(p)
 
+    # Фильтр
     ko = user.get('keep_only', [])
     if ko:
-        msg += "\n📋 Фильтр:\n"
+        msg += "\n📋 Фильтр ({}):\n".format(len(ko))
         for p in ko:
             msg += "  • {}\n".format(p)
+
+    # Объяснение стратегий (только для priority+)
+    if level in ['priority', 'superpriority', 'ssuperpriority']:
+        msg += "\n━━━ Стратегии ━━━\n"
+        msg += "📊 A — перелив X↔Y всегда\n"
+        msg += "   (без проверки роста инструмента)\n"
+        msg += "📊 B — только если инструмент вырос на 1%\n"
+        msg += "   (меньше ложных сигналов)\n"
+        msg += "📊 AB — обе (по умолчанию)\n"
 
     return msg
 
 
-
-
-# ---------- ОБРАБОТЧИКИ КОМАНД ----------
 def handle_command(user_id, text):
     """Обрабатывает команду. Возвращает ответ (или None)."""
     parts = text.strip().split()
