@@ -46,3 +46,11 @@ coingecko_cache.json
 .env
 .env.local
 redeem_codes.json
+
+# === VPS logs ===
+bot.log
+bot.err
+report.log
+
+# === Virtual environment ===
+venv/
