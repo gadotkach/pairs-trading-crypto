@@ -164,14 +164,14 @@ def format_priority_menu():
 
     msg += "⭐⭐ SUPERPRIORITY\n"
     msg += "  • Все функции Priority\n"
-    msg += "  • /add BTC NEWCOIN — добавить пару\n"
+    msg += "  • /add  — добавить свою пару\n"
     msg += "  • /period, /step, /strategy\n"
     msg += "  • /keep без ограничений\n"
     msg += "  💰 770 ⭐ / мес | 7392 ⭐ / год\n\n"
 
     msg += "⭐⭐⭐ SSUPERPRIORITY\n"
     msg += "  • Все функции Superpriority\n"
-    msg += "  • /buy BTC — цена (2/мес)\n"
+    msg += "  • /buy  — цена входа (2/мес)\n"
     msg += "  💰 3846 ⭐ / мес | 36922 ⭐ / год\n\n"
 
     msg += "→ Нажмите на уровень ниже:"
@@ -473,8 +473,9 @@ def format_start(user_id):
     level = user.get('level', 'basic')
 
     msg = "[CRYPTO] 👋 Добро пожаловать!\n\n"
-    msg += "📊 Парный трейдинг: Z = X/Y.\n"
-    msg += "Используйте меню ниже.\n\n"
+    msg += "📊 Сигналы парный трейдинг: Z = X/Y\n"
+    msg += "Больше функций → /start → ⭐ Приоритет\n"
+    msg += "⭐ Уровни доступа (активная подписка)\n\n"
 
     if level == 'basic':
         msg += "🔒 Стандартный доступ:\n"
