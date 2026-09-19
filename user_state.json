@@ -14,8 +14,26 @@
         "signals": true
       },
       "my_tickers": [],
-      "trades": {},
-      "priority_pairs": [],
+      "trades": {
+        "DOT/XCH": {
+          "date": "2026-09-19",
+          "t1": "DOT",
+          "p1": 1.1316,
+          "q1": 44.3566,
+          "c1": 0.10038,
+          "t2": "XCH",
+          "p2": 1.5045,
+          "q2": 33.2957,
+          "c2": 0.0665,
+          "initial": 50.193928559999996,
+          "z_start": null,
+          "level_X": null,
+          "level_Y": null
+        }
+      },
+      "priority_pairs": [
+        "DOT/XCH"
+      ],
       "keep_only": [],
       "buy_requests_this_month": 0,
       "buy_month": null,
