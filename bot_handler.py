@@ -522,10 +522,10 @@ def format_help(user_id):
     msg = "[CRYPTO] 📋 Справка\n"
     msg += "Стандартные тикеры для расчета: ADA, ICP, ETH, DOT, LINK, ZRO, AAVE, BTC, ATOM, NEAR, XCH, BNB, HBAR, TRX\n\n"
 
-    msg += "📋 Ввод сделки (8 полей):\n"
-    msg += "  T1 P1 Q1 C1 T2 P2 Q2 C2\n"
-    msg += "  Пример:\n"
-    msg += "  DOT 1.1316 44.3566 0.10038 XCH 1.5045 33.2957 0.0665\n\n"
+    msg += "📋 Ввод сделки для анализа (8 полей):\n"
+    msg += "<code>T1 P1 Q1 C1 T2 P2 Q2 C2</code>\n"
+    msg += "Пример:\n"
+    msg += "<code>DOT 1.1316 44.3566 0.10038 XCH 1.5045 33.2957 0.0665</code>\n\n"
 
     msg += "📋 Команды (базовые):\n"
     msg += "  /start — приветствие\n"
