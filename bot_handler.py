@@ -474,8 +474,8 @@ def format_start(user_id):
 
     msg = "[CRYPTO] 👋 Добро пожаловать!\n\n"
     msg += "📊 Сигналы парный трейдинг: Z = X/Y\n"
-    msg += "Больше функций → /start → ⭐ Приоритет\n"
-    msg += "⭐ Уровни доступа (активная подписка)\n\n"
+    msg += "📋 /P — Уровни доступа и цены\n"
+    msg += "📋 /help — все команды\n\n"
 
     if level == 'basic':
         msg += "🔒 Стандартный доступ:\n"
@@ -1053,6 +1053,23 @@ def process_updates(offset=None):
             # Админ-команды
             if cmd in ['/gencode', '/activate', '/codes']:
                 response = handle_admin_command(user_id, cmd, args)
+            # /P — меню уровней
+            elif cmd == '/p':
+                msg_text = format_priority_menu()
+                keyboard = priority_levels_keyboard()
+                url = "{}/bot{}/sendMessage".format(TG_PROXY, TG_TOKEN)
+                payload = {
+                    "chat_id": user_id,
+                    "text": msg_text,
+                    "parse_mode": 'HTML',
+                    "reply_markup": json.dumps(keyboard),
+                }
+                try:
+                    requests.post(url, json=payload, timeout=30)
+                except Exception as e:
+                    print("Error: {}".format(e))
+                continue
+
             # Оплата
             elif cmd in ['/priority', '/superpriority', '/ssuperpriority']:
                 level = cmd.replace('/', '')
