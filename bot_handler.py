@@ -601,19 +601,21 @@ def format_help(user_id):
 def format_filter(user_id):
     """Показать активные пары + настройки."""
     user = get_user(user_id)
-    level = user.get('level', 'basic')
 
     msg = "[CRYPTO] 📋 Мои пары\n\n"
 
     pp = user.get('priority_pairs', [])
+    ps = user.get('pair_settings', {})
+
     if pp:
         msg += "📨 Рассылка ({}):\n".format(len(pp))
-        for p in pp:
-            if isinstance(p, dict):
-                msg += "  • {} (STEP {}%, {})\n".format(
-                    p.get('pair'), p.get('step', 5), p.get('strategy', 'AB'))
-            else:
-                msg += "  • {}\n".format(p)
+        for pair in pp:
+            s = ps.get(pair, {})
+            step = s.get('step', 5)
+            strategy = s.get('strategy', 'AB')
+            period = s.get('period', '1y')
+            msg += "  • {} (STEP {}%, {}, {})\n".format(
+                pair, step, strategy, period)
     else:
         msg += "📨 Рассылка: пусто\n"
 
@@ -622,13 +624,6 @@ def format_filter(user_id):
         msg += "\n🔒 Фильтр ({}):\n".format(len(ko))
         for p in ko:
             msg += "  • {}\n".format(p)
-
-    msg += "\n📊 Глобально:\n"
-    msg += "  STEP: {}%\n".format(user.get('step', 5))
-    msg += "  Стратегия: {}\n".format(user.get('strategy', 'AB'))
-    period = user.get('period', {})
-    msg += "  Период: {} {}\n".format(
-        period.get('type', 'years'), period.get('value', 1))
 
     return msg
 
@@ -810,6 +805,16 @@ def handle_trade(user_id, text):
     if pair_str not in pp:
         pp.append(pair_str)
         set_user_field(user_id, 'priority_pairs', pp)
+
+    # Дефолтные настройки для пары
+    ps = user.get('pair_settings', {})
+    if pair_str not in ps:
+        ps[pair_str] = {
+            'step': 5,
+            'strategy': 'AB',
+            'period': '1y'
+        }
+        set_user_field(user_id, 'pair_settings', ps)
 
     # Проверяем, есть ли вторая сторона
     warn = ""
