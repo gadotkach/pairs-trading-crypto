@@ -1162,15 +1162,125 @@ def process_updates(offset=None):
                         pair_str = pair_to_str(pair)
                         user = get_user(user_id)
                         pp = user.get('priority_pairs', [])
-                        # pp может быть list of dict или list of str
-                        new_pp = [p for p in pp if (p.get('pair') if isinstance(p, dict) else p) != pair_str]
-                        if len(new_pp) < len(pp):
-                            set_user_field(user_id, 'priority_pairs', new_pp)
+                        if pair_str in pp:
+                            pp.remove(pair_str)
+                            set_user_field(user_id, 'priority_pairs', pp)
+                            # Удалить настройки
+                            ps = user.get('pair_settings', {})
+                            if pair_str in ps:
+                                del ps[pair_str]
+                                set_user_field(user_id, 'pair_settings', ps)
                             send_message(user_id, "[CRYPTO] ✅ {} удалён из рассылки.".format(pair_str))
                         else:
                             send_message(user_id, "[CRYPTO] ❌ {} нет в рассылке.".format(pair_str))
                     else:
                         send_message(user_id, "[CRYPTO] ❌ Неверная пара.")
+                continue
+
+            # /step BTC ETH 12
+            elif cmd == '/step':
+                if len(args) < 3:
+                    send_message(user_id, "[CRYPTO] Введите: /step BTC ETH 12")
+                    continue
+                pair = parse_pair(' '.join(args[:2]))
+                if not pair:
+                    send_message(user_id, "[CRYPTO] ❌ Неверная пара.")
+                    continue
+                pair_str = pair_to_str(pair)
+                try:
+                    new_step = int(args[2])
+                except ValueError:
+                    send_message(user_id, "[CRYPTO] ❌ Шаг должен быть числом.")
+                    continue
+                if new_step < 1 or new_step > 50:
+                    send_message(user_id, "[CRYPTO] ❌ Шаг от 1 до 50.")
+                    continue
+                user = get_user(user_id)
+                pp = user.get('priority_pairs', [])
+                if pair_str not in pp:
+                    send_message(user_id, "[CRYPTO] ❌ Пары {} нет в рассылке. Сначала /trade.".format(pair_str))
+                    continue
+                ps = user.get('pair_settings', {})
+                if pair_str not in ps:
+                    ps[pair_str] = {'step': 5, 'strategy': 'AB', 'period': '1y'}
+                ps[pair_str]['step'] = new_step
+                set_user_field(user_id, 'pair_settings', ps)
+                send_message(user_id, "[CRYPTO] ✅ {}: STEP = {}%".format(pair_str, new_step))
+                continue
+
+            # /strategy BTC ETH A
+            elif cmd == '/strategy':
+                if len(args) < 3:
+                    send_message(user_id, "[CRYPTO] Введите: /strategy BTC ETH A (A/B/AB)")
+                    continue
+                pair = parse_pair(' '.join(args[:2]))
+                if not pair:
+                    send_message(user_id, "[CRYPTO] ❌ Неверная пара.")
+                    continue
+                pair_str = pair_to_str(pair)
+                new_strategy = args[2].upper()
+                if new_strategy not in ['A', 'B', 'AB']:
+                    send_message(user_id, "[CRYPTO] ❌ Стратегия: A, B или AB.")
+                    continue
+                user = get_user(user_id)
+                pp = user.get('priority_pairs', [])
+                if pair_str not in pp:
+                    send_message(user_id, "[CRYPTO] ❌ Пары {} нет в рассылке. Сначала /trade.".format(pair_str))
+                    continue
+                ps = user.get('pair_settings', {})
+                if pair_str not in ps:
+                    ps[pair_str] = {'step': 5, 'strategy': 'AB', 'period': '1y'}
+                ps[pair_str]['strategy'] = new_strategy
+                set_user_field(user_id, 'pair_settings', ps)
+                send_message(user_id, "[CRYPTO] ✅ {}: стратегия = {}".format(pair_str, new_strategy))
+                continue
+
+            # /period BTC ETH 1y
+            elif cmd == '/period':
+                if len(args) < 3:
+                    send_message(user_id, "[CRYPTO] Введите: /period BTC ETH 1y")
+                    continue
+                pair = parse_pair(' '.join(args[:2]))
+                if not pair:
+                    send_message(user_id, "[CRYPTO] ❌ Неверная пара.")
+                    continue
+                pair_str = pair_to_str(pair)
+                period_str = ' '.join(args[2:])
+
+                # Проверка формата
+                valid = False
+                if period_str.endswith('y'):
+                    try:
+                        int(period_str[:-1])
+                        valid = True
+                    except ValueError:
+                        pass
+                elif period_str.endswith('d'):
+                    try:
+                        int(period_str[:-1])
+                        valid = True
+                    except ValueError:
+                        pass
+                elif ' ' in period_str:
+                    parts = period_str.split()
+                    if len(parts) == 2:
+                        valid = True
+
+                if not valid:
+                    send_message(user_id, "[CRYPTO] ❌ Формат: 1y, 365d, или 01-01-2024 19-09-2026")
+                    continue
+
+                user = get_user(user_id)
+                pp = user.get('priority_pairs', [])
+                if pair_str not in pp:
+                    send_message(user_id, "[CRYPTO] ❌ Пары {} нет в рассылке. Сначала /trade.".format(pair_str))
+                    continue
+                ps = user.get('pair_settings', {})
+                if pair_str not in ps:
+                    ps[pair_str] = {'step': 5, 'strategy': 'AB', 'period': '1y'}
+                ps[pair_str]['period'] = period_str
+                set_user_field(user_id, 'pair_settings', ps)
+                send_message(user_id, "[CRYPTO] ✅ {}: период = {}".format(pair_str, period_str))
                 continue
 
             if cmd in ['/gencode', '/activate', '/codes']:
