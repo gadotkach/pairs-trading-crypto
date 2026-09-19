@@ -37,7 +37,7 @@ STEP = 0.05          # ±5% от level
 CHECK_PROFIT = 1.01  # для варианта B: X должен подорожать на 1%
 
 # Стартовый баланс
-INITIAL = 10000.0    # $10,000
+INITIAL = 200.0    # $10,000
 
 # Комиссия (0.4% от сделки)
 COMMISSION_RATE = 0.004
@@ -189,6 +189,21 @@ def load_excluded(df5, threshold=30):
     return excluded, extrema_3y
 
 
+def build_extrema_by_period(df5):
+    """Словарь {(period, pair): extrema} из Analytics_Z (5%)."""
+    result = {}
+    if df5.empty:
+        return result
+    for _, row in df5.iterrows():
+        period = row.get('Период')
+        pair = row.get('Пара')
+        ext = row.get('Экстремумы')
+        if period is None or pair is None or pd.isna(ext):
+            continue
+        result[(period, pair)] = int(ext)
+    return result
+
+
 def build_analytics_10(df10):
     """Dict {pair: {min_z_10, max_z_10, p_max_10, p_min_10}} (3 года)."""
     result = {}
@@ -243,9 +258,18 @@ def simulate_pair(prices, ticker_x, ticker_y, check_profit=False):
     cash = 0.0
     trades = 0
     cancelled = 0
+    total_commission = 0.0
+    total_sold_x = 0.0
+    total_bought_y = 0.0
+    total_sold_y = 0.0
+    total_bought_x = 0.0  # НОВОЕ
+    start_shares_x = shares_x  # X в начале
+    end_shares_x = 0.0
+    start_shares_y = 0.0  # Y при первой сделке
+    end_shares_y = 0.0
+    first_y_set = False  # флаг: Y ещё не куплен
     level_X = start_z
     level_Y = start_z
-    max_positions = 1  # без сетки
 
     for i in range(1, len(z)):
         v = float(z.iloc[i])
@@ -263,16 +287,23 @@ def simulate_pair(prices, ticker_x, ticker_y, check_profit=False):
                 # Продаём X
                 sell = shares_x * p_x
                 comm = sell * COMMISSION_RATE
+                total_commission += comm
+                total_sold_x += shares_x
                 net = sell - comm
                 cash = net
 
                 # Покупаем Y на весь cash
                 shares_y = cash / p_y
+                total_bought_y += shares_y
                 y_ref = p_y
                 shares_x = 0
                 cash = 0
                 trades += 1
                 level_X = v
+                end_shares_y = shares_y
+                if not first_y_set:
+                    start_shares_y = shares_y  # первая покупка Y
+                    first_y_set = True
             else:
                 cancelled += 1
 
@@ -287,16 +318,20 @@ def simulate_pair(prices, ticker_x, ticker_y, check_profit=False):
                 # Продаём Y
                 sell = shares_y * p_y
                 comm = sell * COMMISSION_RATE
+                total_commission += comm
+                total_sold_y += shares_y  # НОВОЕ
                 net = sell - comm
                 cash = net
 
                 # Покупаем X на весь cash
                 shares_x = cash / p_x
+                total_bought_x += shares_x  # НОВОЕ
                 x_ref = p_x
                 shares_y = 0
                 cash = 0
                 trades += 1
                 level_Y = v
+                end_shares_x = shares_x
             else:
                 cancelled += 1
 
@@ -316,14 +351,64 @@ def simulate_pair(prices, ticker_x, ticker_y, check_profit=False):
 
     profit_pct = (final_value - invested) / invested * 100 if invested > 0 else 0.0
 
+    # Итоговые количества монет
+    if shares_x > 0:
+        fin_x = shares_x
+        fin_y = 0.0
+    elif shares_y > 0:
+        fin_x = 0.0
+        fin_y = shares_y
+    else:
+        fin_x = 0.0
+        fin_y = 0.0
+
+    # Изменение, %:
+    #   Если Финал X != 0 → считаем по X
+    #   Если Финал X == 0 → считаем по Y
+    if fin_x != 0 and start_shares_x > 0:
+        change_y_pct = (fin_x - start_shares_x) / start_shares_x * 100
+    elif fin_x == 0 and start_shares_y > 0 and fin_y > 0:
+        change_y_pct = (fin_y - start_shares_y) / start_shares_y * 100
+    else:
+        change_y_pct = None
+
+    # Цены монет
+    if final_value > 0:
+        if shares_x > 0:
+            price_start = start_px
+            price_end = final_px
+        elif shares_y > 0:
+            price_start = start_py
+            price_end = final_py
+        else:
+            price_start = 0.0
+            price_end = 0.0
+    else:
+        price_start = 0.0
+        price_end = 0.0
+
     return {
         'Сделок': trades,
         'Отменено': cancelled,
         'Довнесений': 0,
+        'Старт X, монет': round(start_shares_x, 8),
+        'Финал X, монет': round(fin_x, 8),
+        'Старт Y, монет': round(start_shares_y, 8),
+        'Финал Y, монет': round(fin_y, 8),
+        'Продано X': round(total_sold_x, 8),
+        'Куплено Y': round(total_bought_y, 8),
+        'Продано Y': round(total_sold_y, 8),
+        'Куплено X': round(total_bought_x, 8),
+        'Изменение, %': round(change_y_pct, 2) if change_y_pct is not None else None,
         'Внесено, $': round(invested, 2),
-        'Стоимость, $': round(final_value, 2),
+        'Деньги в конце, $': round(final_value, 2),
+        'Налог, $': 0.0,
+        'Комиссия, $': round(total_commission, 2),
+        'Заработано (после), $': round(final_value - invested, 2),
         'Доходность (после), %': round(profit_pct, 2),
         'Где деньги в конце': holding,
+        'Цена монеты начало': round(price_start, 6) if price_start else None,
+        'Цена монеты конец': round(price_end, 6) if price_end else None,
     }
 
 
@@ -355,6 +440,8 @@ def main():
     # 2. Фильтр ТОПа
     passed_extrema = load_extrema_threshold(df5, threshold=EXTREMA_THRESHOLD)
     excluded_from_signal, extrema_3y = load_excluded(df5, threshold=EXTREMA_THRESHOLD)
+    extrema_by_period = build_extrema_by_period(df5)
+    print("[extrema] пар в словаре: {}".format(len(extrema_by_period)))
 
     # Состояние — было раньше?
     state = load_state()
@@ -404,18 +491,28 @@ def main():
                 # Вариант A (без проверки)
                 res_a = simulate_pair(period_prices, ta, tb, check_profit=False)
                 if res_a:
-                    res_a['Период'] = period_name
-                    res_a['Пара'] = pair_name
-                    res_a['В ТОП'] = 'ДА' if pair_name in passed_extrema else 'НЕТ'
-                    rows_a.append(res_a)
+                    # ФИЛЬТР: если сделок не было (Старт = Финал) — исключить
+                    if (abs(res_a['Старт X, монет'] - res_a['Финал X, монет']) < 1e-9 or
+                            abs(res_a['Старт Y, монет'] - res_a['Финал Y, монет']) < 1e-9):
+                        pass
+                    else:
+                        res_a['Период'] = period_name
+                        res_a['Пара'] = pair_name
+                        res_a['Экстремумы'] = extrema_by_period.get((period_name, pair_name), 0)
+                        rows_a.append(res_a)
 
                 # Вариант B (с проверкой ×1.01)
                 res_b = simulate_pair(period_prices, ta, tb, check_profit=True)
                 if res_b:
-                    res_b['Период'] = period_name
-                    res_b['Пара'] = pair_name
-                    res_b['В ТОП'] = 'ДА' if pair_name in passed_extrema else 'НЕТ'
-                    rows_b.append(res_b)
+                    # ФИЛЬТР: если сделок не было (Старт = Финал) — исключить
+                    if (abs(res_b['Старт X, монет'] - res_b['Финал X, монет']) < 1e-9 or
+                            abs(res_b['Старт Y, монет'] - res_b['Финал Y, монет']) < 1e-9):
+                        pass
+                    else:
+                        res_b['Период'] = period_name
+                        res_b['Пара'] = pair_name
+                        res_b['Экстремумы'] = extrema_by_period.get((period_name, pair_name), 0)
+                        rows_b.append(res_b)
 
                 n_processed += 1
 
@@ -423,18 +520,32 @@ def main():
 
         if rows_a:
             df_a = pd.DataFrame(rows_a)
-            df_a = df_a[['Период', 'Пара', 'В ТОП', 'Сделок', 'Отменено',
-                         'Довнесений', 'Внесено, $', 'Стоимость, $',
-                         'Доходность (после), %', 'Где деньги в конце']]
+            df_a = df_a[['Период', 'Пара', 'Экстремумы',
+                         'Сделок', 'Отменено', 'Довнесений',
+                         'Старт X, монет', 'Финал X, монет',
+                         'Старт Y, монет', 'Финал Y, монет',
+                         'Продано X', 'Куплено Y', 'Продано Y', 'Куплено X',
+                         'Изменение, %',
+                         'Внесено, $', 'Деньги в конце, $',
+                         'Налог, $', 'Комиссия, $', 'Заработано (после), $',
+                         'Доходность (после), %', 'Где деньги в конце',
+                         'Цена монеты начало', 'Цена монеты конец']]
             df_a = df_a.sort_values('Доходность (после), %',
                                     ascending=False).reset_index(drop=True)
             all_results['A_' + period_name] = df_a
 
         if rows_b:
             df_b = pd.DataFrame(rows_b)
-            df_b = df_b[['Период', 'Пара', 'В ТОП', 'Сделок', 'Отменено',
-                         'Довнесений', 'Внесено, $', 'Стоимость, $',
-                         'Доходность (после), %', 'Где деньги в конце']]
+            df_b = df_b[['Период', 'Пара', 'Экстремумы',
+                         'Сделок', 'Отменено', 'Довнесений',
+                         'Старт X, монет', 'Финал X, монет',
+                         'Старт Y, монет', 'Финал Y, монет',
+                         'Продано X', 'Куплено Y', 'Продано Y', 'Куплено X',
+                         'Изменение, %',
+                         'Внесено, $', 'Деньги в конце, $',
+                         'Налог, $', 'Комиссия, $', 'Заработано (после), $',
+                         'Доходность (после), %', 'Где деньги в конце',
+                         'Цена монеты начало', 'Цена монеты конец']]
             df_b = df_b.sort_values('Доходность (после), %',
                                     ascending=False).reset_index(drop=True)
             all_results['B_' + period_name] = df_b
