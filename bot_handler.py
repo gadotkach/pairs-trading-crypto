@@ -1,0 +1,876 @@
+"""Telegram-бот для парного трейдинга (уровни, команды, сделки)."""
+import os
+import re
+import json
+import requests
+from datetime import datetime, timedelta
+import pandas as pd
+
+from tickers import (
+    get_base_tickers, get_extended_tickers, is_available,
+    add_extended_ticker, parse_pair, parse_pairs, pair_to_str
+)
+from finance_api import check_ticker
+
+# ---------- КОНФИГ ----------
+TG_PROXY = os.environ.get("TG_PROXY", "https://tg-proxy.shvaboe.workers.dev")
+TG_TOKEN = os.environ.get("TG_TOKEN", "")
+TG_CHAT = os.environ.get("TG_CHAT", "")
+ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID", TG_CHAT)
+
+PRIORITY_CODE = os.environ.get("PRIORITY_CODE", "")
+SUPERPRIORITY_CODE = os.environ.get("SUPERPRIORITY_CODE", "")
+SSUPERPRIORITY_CODE = os.environ.get("SSUPERPRIORITY_CODE", "")
+
+STATE_FILE = 'user_state.json'
+ANALYTICS_FILE = 'analytics_z.xlsx'
+STRATEGY_FILE = 'pair_strategies_analysis.xlsx'
+CACHE_DIR = 'cache'
+
+# Уровни
+LEVELS = ['basic', 'priority', 'superpriority', 'ssuperpriority']
+
+# Лимиты пар для /keep по уровням
+KEEP_LIMITS = {
+    'basic': 1,
+    'priority': 20,
+    'superpriority': 999999,
+    'ssuperpriority': 999999,
+}
+
+# ---------- STATE ----------
+def load_state():
+    if not os.path.exists(STATE_FILE):
+        return {'users': {}}
+    try:
+        with open(STATE_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {'users': {}}
+
+
+def save_state(state):
+    with open(STATE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
+
+
+def get_user(user_id):
+    state = load_state()
+    uid = str(user_id)
+    if uid not in state['users']:
+        state['users'][uid] = {
+            'level': 'basic',
+            'strategy': 'AB',
+            'step': 5,
+            'period': {'type': 'years', 'value': 1},
+            'subscriptions': {
+                'check': True,
+                'pair': True,
+                'signals': True,
+            },
+            'my_tickers': [],
+            'trades': {},
+            'priority_pairs': [],
+            'keep_only': [],
+            'buy_requests_this_month': 0,
+            'buy_month': None,
+        }
+        save_state(state)
+    return state['users'][uid]
+
+
+def set_user_field(user_id, field, value):
+    state = load_state()
+    uid = str(user_id)
+    if uid not in state['users']:
+        get_user(user_id)
+        state = load_state()
+    state['users'][uid][field] = value
+    save_state(state)
+
+
+def is_priority(user_id):
+    user = get_user(user_id)
+    return user['level'] in ['priority', 'superpriority', 'ssuperpriority']
+
+
+def is_super(user_id):
+    user = get_user(user_id)
+    return user['level'] in ['superpriority', 'ssuperpriority']
+
+
+def is_ss(user_id):
+    user = get_user(user_id)
+    return user['level'] == 'ssuperpriority'
+
+
+# ---------- TELEGRAM ----------
+def send_message(chat_id, text, parse_mode='HTML'):
+    url = "{}/bot{}/sendMessage".format(TG_PROXY, TG_TOKEN)
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": parse_mode,
+    }
+    try:
+        r = requests.post(url, json=payload, timeout=30)
+        return r.status_code == 200
+    except Exception as e:
+        print("[telegram] error: {}".format(e))
+        return False
+
+
+def get_updates(offset=None):
+    url = "{}/bot{}/getUpdates".format(TG_PROXY, TG_TOKEN)
+    params = {'timeout': 30}
+    if offset:
+        params['offset'] = offset
+    try:
+        r = requests.get(url, params=params, timeout=60)
+        if r.status_code == 200:
+            return r.json()
+    except Exception as e:
+        print("[telegram] getUpdates error: {}".format(e))
+    return {'result': []}
+
+
+# ---------- ПАРСИНГ ВВОДА ----------
+def parse_trade(text):
+    """
+    'DOT 1.1316 44.3566 0.10038 XCH 1.5045 33.2957 0.0665'
+    -> dict или None.
+    """
+    tokens = text.strip().split()
+    if len(tokens) != 8:
+        return None
+
+    t1, p1, q1, c1, t2, p2, q2, c2 = tokens
+
+    try:
+        p1 = float(p1.replace(',', '.'))
+        q1 = float(q1.replace(',', '.'))
+        c1 = float(c1.replace(',', '.'))
+        p2 = float(p2.replace(',', '.'))
+        q2 = float(q2.replace(',', '.'))
+        c2 = float(c2.replace(',', '.'))
+    except ValueError:
+        return None
+
+    if not is_available(t1.upper()) or not is_available(t2.upper()):
+        return None
+
+    return {
+        't1': t1.upper(), 'p1': p1, 'q1': q1, 'c1': c1,
+        't2': t2.upper(), 'p2': p2, 'q2': q2, 'c2': c2,
+    }
+
+
+def check_trade(trade):
+    """
+    Проверка сходимости (0.5%).
+    Если q2 > 0 и p2 > 0 → проверяем.
+    Если q2 = 0 или p2 = 0 → это "только X" (ок).
+    Если q1 = 0 или p1 = 0 → это "только Y" (ок).
+    """
+    q1, p1, c1 = trade['q1'], trade['p1'], trade['c1']
+    q2, p2, c2 = trade['q2'], trade['p2'], trade['c2']
+
+    # Только X
+    if q2 == 0 and p2 == 0:
+        return True, None
+
+    # Только Y
+    if q1 == 0 and p1 == 0:
+        return True, None
+
+    # Полная
+    sold = q1 * p1 - c1
+    bought = q2 * p2
+
+    if sold <= 0:
+        return False, 'Некорректная сумма продажи'
+
+    diff = abs(sold - bought) / sold
+    if diff > 0.005:
+        return False, 'Не сходится: продано {:.4f}, куплено {:.4f}, разница {:.2%}'.format(
+            sold, bought, diff)
+
+    return True, None
+
+
+
+
+# ---------- АНАЛИТИКА ----------
+def load_analytics_df(sheet='Analytics_Z'):
+    try:
+        return pd.read_excel(ANALYTICS_FILE, sheet_name=sheet)
+    except Exception as e:
+        print("analytics error: {}".format(e))
+        return pd.DataFrame()
+
+
+def load_strategy_df(sheet):
+    try:
+        return pd.read_excel(STRATEGY_FILE, sheet_name=sheet)
+    except Exception as e:
+        print("strategy error: {}".format(e))
+        return pd.DataFrame()
+
+
+def calc_period_label(user):
+    period = user.get('period', {'type': 'years', 'value': 1})
+    ptype = period.get('type', 'years')
+    pvalue = period.get('value', 1)
+    if ptype == 'years':
+        return '{} год'.format(pvalue) if pvalue == 1 else '{} лет'.format(pvalue)
+    elif ptype == 'days':
+        return '{} дней'.format(pvalue)
+    elif ptype == 'dates':
+        return '{} -> {}'.format(period.get('start', '?'), period.get('end', '?'))
+    return '1 год'
+
+
+def calc_pair_data(pair_str, period_label='1 год', step=5):
+    df5 = load_analytics_df('Analytics_Z')
+    df10 = load_analytics_df('Analytics_Z_10')
+
+    if df5.empty:
+        return None
+
+    row5 = df5[(df5['Период'] == period_label) & (df5['Пара'] == pair_str)]
+    row10 = df10[(df10['Период'] == period_label) & (df10['Пара'] == pair_str)]
+
+    if row5.empty:
+        return None
+
+    r5 = row5.iloc[0]
+
+    result = {
+        'pair': pair_str,
+        'period': period_label,
+        'sminZ': float(r5.get('sminZ', 0)),
+        'smaxZ': float(r5.get('smaxZ', 0)),
+        'min_z': float(r5.get('Мин Z', 0)),
+        'max_z': float(r5.get('Макс Z', 0)),
+        'mean_z': float(r5.get('Z средняя', 0)),
+        'extrema_5': int(r5.get('Экстремумы', 0)),
+        'pmin_5': float(r5.get('P min')) if not pd.isna(r5.get('P min')) else None,
+        'pmax_5': float(r5.get('P max')) if not pd.isna(r5.get('P max')) else None,
+        'repeats_5': int(r5.get('Уровней с повтором', 0)),
+        'pmin_10': None,
+        'pmax_10': None,
+        'extrema_10': 0,
+        'repeats_10': 0,
+    }
+
+    if not row10.empty:
+        r10 = row10.iloc[0]
+        result['extrema_10'] = int(r10.get('Экстремумы', 0))
+        result['repeats_10'] = int(r10.get('Уровней с повтором', 0))
+        if not pd.isna(r10.get('P min')):
+            result['pmin_10'] = float(r10.get('P min'))
+        if not pd.isna(r10.get('P max')):
+            result['pmax_10'] = float(r10.get('P max'))
+
+    sub = load_strategy_df('A_1_год')
+    if not sub.empty:
+        srow = sub[sub['Пара'] == pair_str]
+        if not srow.empty:
+            result['trades'] = int(srow.iloc[0].get('Сделок', 0))
+            result['profit_a'] = float(srow.iloc[0].get('Доходность (после), %', 0))
+        else:
+            result['trades'] = 0
+            result['profit_a'] = 0.0
+    else:
+        result['trades'] = 0
+        result['profit_a'] = 0.0
+
+    sub_b = load_strategy_df('B_1_год')
+    if not sub_b.empty:
+        srow = sub_b[sub_b['Пара'] == pair_str]
+        if not srow.empty:
+            result['profit_b'] = float(srow.iloc[0].get('Доходность (после), %', 0))
+        else:
+            result['profit_b'] = 0.0
+    else:
+        result['profit_b'] = 0.0
+
+    return result
+
+
+def format_pair_short(data, level='basic'):
+    msg = "[CRYPTO] /pair {}\n\n".format(data['pair'])
+    msg += "Период: {}\n".format(data['period'])
+    msg += "Z: {:.4f} (min {:.4f}, max {:.4f})\n".format(
+        data['mean_z'], data['min_z'], data['max_z'])
+    msg += "\n"
+    msg += "Границы:\n"
+    msg += "  Pmin (5%): {} | Pmax (5%): {}\n".format(data['pmin_5'], data['pmax_5'])
+    msg += "  Pmin (10%): {} | Pmax (10%): {}\n".format(data['pmin_10'], data['pmax_10'])
+    msg += "\n"
+    msg += "Сделок: {}\n".format(data['trades'])
+    msg += "Доходность: A: {:+.2f}%, B: {:+.2f}%\n".format(
+        data['profit_a'], data['profit_b'])
+    return msg
+
+
+def format_pair_full(data, level='priority', step=5):
+    msg = "[CRYPTO] /pair {}\n\n".format(data['pair'])
+    msg += "STEP: {}% | Период: {}\n".format(step, data['period'])
+    msg += "Z: {:.4f}\n".format(data['mean_z'])
+    msg += "\n"
+    msg += "sminZ: {:.4f} | smaxZ: {:.4f}\n".format(data['sminZ'], data['smaxZ'])
+    msg += "\n"
+    msg += "Границы:\n"
+    msg += "  Pmin (5%): {} | Pmax (5%): {}\n".format(data['pmin_5'], data['pmax_5'])
+    msg += "  Pmin (10%): {} | Pmax (10%): {}\n".format(data['pmin_10'], data['pmax_10'])
+    msg += "\n"
+    msg += "Сделок: {} | Повтор: {}\n".format(data['trades'], data['repeats_5'])
+    msg += "Доходность: A: {:+.2f}%, B: {:+.2f}%\n".format(
+        data['profit_a'], data['profit_b'])
+    return msg
+
+
+
+
+# ---------- МЕНЮ (ТЕКСТ) ----------
+def format_start(user_id):
+    user = get_user(user_id)
+    level = user.get('level', 'basic')
+
+    msg = "[CRYPTO] 👋 Добро пожаловать!\n\n"
+    msg += "📊 Парный трейдинг: Z = X/Y.\n\n"
+
+    if level == 'basic':
+        msg += "🔒 Стандартный доступ:\n"
+        msg += "  • /pair BTC ETH — данные (1 год)\n"
+        msg += "  • /keep BTC ETH — фильтр (1 пара)\n"
+        msg += "  • /help\n\n"
+        msg += "📨 Рассылка:\n"
+        msg += "  • Только по 1 паре\n"
+        msg += "  • Общие сигналы\n\n"
+        msg += "⭐ Для полного доступа — /priority CODE\n"
+
+    elif level == 'priority':
+        msg += "⭐ Приоритетный доступ:\n"
+        msg += "  • /pair BTC ETH — данные (5/3/1 год)\n"
+        msg += "  • /check DOT XCH — анализ + рекомендация\n"
+        msg += "  • /find BTC — топ-5 пар\n"
+        msg += "  • /keep — фильтр (до 20 пар)\n"
+        msg += "  • /status\n\n"
+        msg += "📨 Рассылка:\n"
+        msg += "  • Отдельно по каждой паре (до 20)\n"
+        msg += "  • Рекомендация старта\n"
+        msg += "  • Уведомления коридора\n\n"
+        msg += "⭐⭐ Расширение — /superpriority CODE\n"
+
+    elif level == 'superpriority':
+        msg += "⭐⭐ Супер-приоритетный доступ:\n"
+        msg += "  • Все функции priority\n"
+        msg += "  • /add BTC NEWCOIN — добавить пару\n"
+        msg += "  • /period, /step, /strategy\n"
+        msg += "  • /keep (без ограничений)\n\n"
+        msg += "📨 Рассылка:\n"
+        msg += "  • Неограниченное количество пар\n\n"
+        msg += "⭐⭐⭐ Расширение — /ssuperpriority CODE\n"
+
+    elif level == 'ssuperpriority':
+        msg += "⭐⭐⭐ СС-приоритетный доступ:\n"
+        msg += "  • Все функции superpriority\n"
+        msg += "  • /buy BTC — рекомендованная цена (2/мес)\n\n"
+        msg += "📨 Рассылка:\n"
+        msg += "  • Неограниченное количество пар\n"
+
+    return msg
+
+
+def format_help(user_id):
+    user = get_user(user_id)
+    level = user.get('level', 'basic')
+
+    msg = "[CRYPTO] 📋 Справка\n\n"
+    msg += "📋 Ввод сделки (8 полей):\n"
+    msg += "  T1 P1 Q1 C1 T2 P2 Q2 C2\n"
+    msg += "  Пример:\n"
+    msg += "  DOT 1.1316 44.3566 0.10038 XCH 1.5045 33.2957 0.0665\n\n"
+
+    msg += "📋 Команды (базовые):\n"
+    msg += "  /start — приветствие\n"
+    msg += "  /help — справка\n"
+    msg += "  /status — статус\n"
+    msg += "  /pair BTC ETH — данные по паре\n"
+    msg += "  /keep BTC ETH — фильтр (1 пара)\n"
+
+    if is_priority(user_id):
+        msg += "\n📋 Команды (priority):\n"
+        msg += "  /check DOT XCH — анализ\n"
+        msg += "  /find BTC [N] — топ-N пар\n"
+        msg += "  /keep ... — фильтр (до 20)\n"
+
+    if is_super(user_id):
+        msg += "\n📋 Команды (superpriority):\n"
+        msg += "  /add BTC NEWCOIN — добавить пару\n"
+        msg += "  /period — период\n"
+        msg += "  /step — шаг\n"
+        msg += "  /strategy — стратегия\n"
+
+    if is_ss(user_id):
+        msg += "\n📋 Команды (ssuperpriority):\n"
+        msg += "  /buy BTC — рекомендованная цена (2/мес)\n"
+
+    msg += "\n📋 Активация:\n"
+    msg += "  /priority CODE\n"
+    msg += "  /superpriority CODE\n"
+    msg += "  /ssuperpriority CODE\n"
+
+    return msg
+
+
+def format_status(user_id):
+    user = get_user(user_id)
+    level = user.get('level', 'basic')
+
+    msg = "[CRYPTO] /status\n\n"
+    msg += "👤 Уровень: {}\n".format(level)
+    msg += "📊 Стратегия: {}\n".format(user.get('strategy', 'AB'))
+    msg += "📊 STEP: {}%\n".format(user.get('step', 5))
+
+    period = user.get('period', {})
+    msg += "📅 Период: {} {}\n".format(
+        period.get('type', 'years'), period.get('value', 1))
+
+    msg += "\n📋 Рассылки:\n"
+    subs = user.get('subscriptions', {})
+    for k, v in subs.items():
+        msg += "  • {}: {}\n".format(k, "✅" if v else "❌")
+
+    trades = user.get('trades', {})
+    if trades:
+        msg += "\n📋 Сделки ({}):\n".format(len(trades))
+        for pair in trades:
+            msg += "  • {}\n".format(pair)
+
+    pp = user.get('priority_pairs', [])
+    if pp:
+        msg += "\n📋 Приоритетные ({}):\n".format(len(pp))
+        for p in pp:
+            msg += "  • {}\n".format(p)
+
+    ko = user.get('keep_only', [])
+    if ko:
+        msg += "\n📋 Фильтр:\n"
+        for p in ko:
+            msg += "  • {}\n".format(p)
+
+    return msg
+
+
+
+
+# ---------- ОБРАБОТЧИКИ КОМАНД ----------
+def handle_command(user_id, text):
+    """Обрабатывает команду. Возвращает ответ (или None)."""
+    parts = text.strip().split()
+    if not parts:
+        return None
+
+    cmd = parts[0].lower()
+    args = parts[1:]
+
+    # /start
+    if cmd == '/start':
+        return format_start(user_id)
+
+    # /help
+    if cmd == '/help':
+        return format_help(user_id)
+
+    # /status
+    if cmd == '/status':
+        return format_status(user_id)
+
+    # /priority CODE
+    if cmd == '/priority':
+        if not args:
+            return "[CRYPTO] Введите код: /priority CODE"
+        code = args[0]
+        if PRIORITY_CODE and code == PRIORITY_CODE:
+            set_user_field(user_id, 'level', 'priority')
+            return "[CRYPTO] ⭐ Приоритет активирован!"
+        return "[CRYPTO] ❌ Неверный код."
+
+    # /superpriority CODE
+    if cmd == '/superpriority':
+        if not args:
+            return "[CRYPTO] Введите код: /superpriority CODE"
+        code = args[0]
+        if SUPERPRIORITY_CODE and code == SUPERPRIORITY_CODE:
+            set_user_field(user_id, 'level', 'superpriority')
+            return "[CRYPTO] ⭐⭐ Супер-приоритет активирован!"
+        return "[CRYPTO] ❌ Неверный код."
+
+    # /ssuperpriority CODE
+    if cmd == '/ssuperpriority':
+        if not args:
+            return "[CRYPTO] Введите код: /ssuperpriority CODE"
+        code = args[0]
+        if SSUPERPRIORITY_CODE and code == SSUPERPRIORITY_CODE:
+            set_user_field(user_id, 'level', 'ssuperpriority')
+            return "[CRYPTO] ⭐⭐⭐ СС-приоритет активирован!"
+        return "[CRYPTO] ❌ Неверный код."
+
+    # /pair BTC ETH
+    if cmd == '/pair':
+        if len(args) < 2:
+            return "[CRYPTO] Введите пару: /pair BTC ETH"
+        pair = parse_pair(' '.join(args))
+        if not pair:
+            return "[CRYPTO] ❌ Неизвестная пара. Проверьте тикеры."
+        pair_str = pair_to_str(pair)
+
+        user = get_user(user_id)
+        step = user.get('step', 5)
+
+        if is_priority(user_id):
+            period_label = calc_period_label(user)
+        else:
+            period_label = '1 год'
+
+        data = calc_pair_data(pair_str, period_label, step)
+        if not data:
+            return "[CRYPTO] ❌ Нет данных по паре {} за {}.".format(pair_str, period_label)
+
+        if is_priority(user_id):
+            return format_pair_full(data, user.get('level', 'basic'), step)
+        return format_pair_short(data)
+
+    # /keep ...
+    if cmd == '/keep':
+        if not args:
+            return "[CRYPTO] Введите пары: /keep BTC ETH"
+        pairs = parse_pairs(' '.join(args))
+        if not pairs:
+            return "[CRYPTO] ❌ Неверный формат или неизвестные тикеры."
+
+        user = get_user(user_id)
+        limit = KEEP_LIMITS.get(user.get('level', 'basic'), 1)
+        if len(pairs) > limit:
+            return "[CRYPTO] ❌ Лимит {} пар для вашего уровня. Запрошено: {}.".format(
+                limit, len(pairs))
+
+        keep = [pair_to_str(p) for p in pairs]
+        set_user_field(user_id, 'keep_only', keep)
+        return "[CRYPTO] ✅ Фильтр обновлён:\n" + "\n".join("  • " + p for p in keep)
+
+    # /clear
+    if cmd == '/clear':
+        set_user_field(user_id, 'keep_only', [])
+        return "[CRYPTO] ✅ Фильтр сброшен."
+
+    # Всё остальное — None (обработается как сделка)
+    return None
+
+
+
+
+# ---------- ОБРАБОТКА СДЕЛКИ ----------
+def handle_trade(user_id, text):
+    """Записывает сделку + добавляет в priority_pairs + отвечает."""
+    trade = parse_trade(text)
+    if not trade:
+        return None
+
+    ok, err = check_trade(trade)
+    if not ok:
+        return "[CRYPTO] ❌ Ошибка в сделке:\n{}".format(err)
+
+    pair_str = '{}/{}'.format(trade['t1'], trade['t2'])
+    today = datetime.now().strftime('%Y-%m-%d')
+
+    user = get_user(user_id)
+    trades = user.get('trades', {})
+
+    initial = trade['q1'] * trade['p1']
+
+    # Если q1 = 0 — только Y
+    if trade['q1'] == 0:
+        initial = trade['q2'] * trade['p2']
+
+    trades[pair_str] = {
+        'date': today,
+        't1': trade['t1'], 'p1': trade['p1'], 'q1': trade['q1'], 'c1': trade['c1'],
+        't2': trade['t2'], 'p2': trade['p2'], 'q2': trade['q2'], 'c2': trade['c2'],
+        'initial': initial,
+        'z_start': None,
+        'level_X': None,
+        'level_Y': None,
+    }
+    set_user_field(user_id, 'trades', trades)
+
+    # В priority_pairs
+    pp = user.get('priority_pairs', [])
+    if pair_str not in pp:
+        pp.append(pair_str)
+        set_user_field(user_id, 'priority_pairs', pp)
+
+    # Проверяем, есть ли вторая сторона
+    warn = ""
+    if trade['q1'] > 0 and (trade['q2'] == 0 or trade['p2'] == 0):
+        warn = "\n⚠️ Y не выбран.\n→ /find {} — подбор\n→ /add {} NEWCOIN — добавить".format(
+            trade['t1'], trade['t1'])
+    elif trade['q2'] > 0 and (trade['q1'] == 0 or trade['p1'] == 0):
+        warn = "\n⚠️ X не выбран.\n→ /find {} — подбор".format(trade['t2'])
+
+    # Ответ
+    msg = "[CRYPTO] ✅ Сделка записана\n\n"
+    msg += "📅 Дата: {}\n".format(today)
+
+    if trade['q1'] > 0:
+        msg += "💰 Продано: {} {}  {}\n".format(
+            trade['q1'], trade['t1'], trade['p1'])
+    else:
+        msg += "💰 Продано: —\n"
+
+    if trade['q2'] > 0:
+        msg += "💰 Куплено: {} {}  {}\n".format(
+            trade['q2'], trade['t2'], trade['p2'])
+    else:
+        msg += "💰 Куплено: —\n"
+
+    msg += "\n⭐ Добавлено в приоритет"
+    msg += warn
+    msg += "\n\n→ /check {} {}".format(trade['t1'], trade['t2'])
+
+    return msg
+
+
+# ---------- /check ----------
+def handle_check(user_id, args):
+    if not is_priority(user_id):
+        return "[CRYPTO] ❌ /check — только для приоритетных.\n→ /priority CODE"
+
+    if len(args) < 2:
+        return "[CRYPTO] Введите пару: /check DOT XCH"
+
+    pair = parse_pair(' '.join(args))
+    if not pair:
+        return "[CRYPTO] ❌ Неизвестная пара."
+
+    pair_str = pair_to_str(pair)
+    user = get_user(user_id)
+    period_label = calc_period_label(user)
+    step = user.get('step', 5)
+
+    data = calc_pair_data(pair_str, period_label, step)
+    if not data:
+        return "[CRYPTO] ❌ Нет данных по паре {}.".format(pair_str)
+
+    msg = "[CRYPTO] /check {}\n\n".format(pair_str)
+    msg += "📅 Период: {}\n".format(period_label)
+    msg += "📈 Z: {:.4f}\n".format(data['mean_z'])
+    msg += "\n"
+    msg += "sminZ: {:.4f} | smaxZ: {:.4f}\n".format(data['sminZ'], data['smaxZ'])
+    msg += "\n"
+
+    # Рекомендация старта
+    z = data['mean_z']
+    sminZ = data['sminZ']
+    smaxZ = data['smaxZ']
+
+    if smaxZ > 0 and abs(z - smaxZ) / smaxZ < 0.05:
+        msg += "🔔 Z ≈ smaxZ ({}):\n   → X → Y (перелив)\n".format(smaxZ)
+    elif sminZ > 0 and abs(z - sminZ) / sminZ < 0.05:
+        msg += "🔔 Z ≈ sminZ ({}):\n   → Y → X (перелив)\n".format(sminZ)
+    else:
+        msg += "🔔 Z между границами.\n"
+
+    msg += "\n📊 Границы:\n"
+    msg += "  Pmin (5%): {} | Pmax (5%): {}\n".format(data['pmin_5'], data['pmax_5'])
+    msg += "  Pmin (10%): {} | Pmax (10%): {}\n".format(data['pmin_10'], data['pmax_10'])
+    msg += "\n📈 Сделок: {} | Повтор: {}\n".format(data['trades'], data['repeats_5'])
+    msg += "💰 Доходность: A: {:+.2f}%, B: {:+.2f}%".format(
+        data['profit_a'], data['profit_b'])
+    return msg
+
+
+# ---------- /find ----------
+def handle_find(user_id, args):
+    if not is_priority(user_id):
+        return "[CRYPTO] ❌ /find — только для приоритетных.\n→ /priority CODE"
+
+    if not args:
+        return "[CRYPTO] Введите тикер: /find BTC"
+
+    ticker = args[0].upper()
+    top_n = 5
+    if len(args) >= 2:
+        try:
+            top_n = min(int(args[1]), 10)
+        except ValueError:
+            pass
+
+    if not is_available(ticker):
+        return "[CRYPTO] ❌ Тикер {} неизвестен.\n→ /add {} NEWCOIN".format(ticker, ticker)
+
+    df = load_strategy_df('A_5_лет')
+    if df.empty:
+        return "[CRYPTO] ❌ Нет данных."
+
+    # Пары с тикером
+    mask = df['Пара'].str.contains(ticker, case=False, na=False)
+    sub = df[mask]
+
+    if sub.empty:
+        return "[CRYPTO] ⚠️ По тикеру {} ничего не найдено.\n→ /add {} NEWCOIN".format(ticker, ticker)
+
+    # ТОП по доходности
+    top_profit = sub.nlargest(top_n, 'Доходность (после), %')
+
+    msg = "[CRYPTO] 🔍 Подбор пары для {}\n\n".format(ticker)
+    msg += "📊 Всего пар с {}: {}\n\n".format(ticker, len(sub))
+
+    msg += "🏆 ТОП-{} по доходности (A, 5 лет):\n".format(top_n)
+    for i, (_, r) in enumerate(top_profit.iterrows(), 1):
+        msg += "  {}. {}  {:+.2f}%\n".format(i, r['Пара'], r['Доходность (после), %'])
+
+    msg += "\n→ /pair {} XCH\n→ /check {} XCH".format(ticker, ticker)
+    return msg
+
+
+# ---------- /add ----------
+def handle_add(user_id, args):
+    if not is_super(user_id):
+        return "[CRYPTO] ❌ /add — только для superpriority+.\n→ /superpriority CODE"
+
+    if len(args) < 2:
+        return "[CRYPTO] Введите: /add BTC NEWCOIN"
+
+    t1, t2 = args[0].upper(), args[1].upper()
+
+    if not is_available(t1):
+        return "[CRYPTO] ❌ {} неизвестен.".format(t1)
+
+    if is_available(t2):
+        return "[CRYPTO] ✅ {} уже доступен.\n→ /pair {} {}".format(t2, t1, t2)
+
+    # Проверка через CoinGecko
+    coin = check_ticker(t2)
+    if not coin:
+        return "[CRYPTO] ❌ Инструмент {} не найден.".format(t2)
+
+    # Добавляем в EXTENDED
+    add_extended_ticker(t2)
+
+    msg = "[CRYPTO] ✅ {} добавлен.\n".format(t2)
+    msg += "CoinGecko: {} ({})\n\n".format(coin.get('name'), coin.get('id'))
+    msg += "⚠️ Пара {} / {} пока не в кэше.\n".format(t1, t2)
+    msg += "Она появится после следующего запуска workflow.\n\n"
+    msg += "→ /status — проверить\n"
+    msg += "→ /pair {} {} — через 1 час".format(t1, t2)
+    return msg
+
+
+# ---------- /buy ----------
+def handle_buy(user_id, args):
+    if not is_ss(user_id):
+        return "[CRYPTO] ❌ /buy — только для ssuperpriority.\n→ /ssuperpriority CODE"
+
+    if not args:
+        return "[CRYPTO] Введите: /buy BTC"
+
+    ticker = args[0].upper()
+    if not is_available(ticker):
+        return "[CRYPTO] ❌ Тикер {} неизвестен.".format(ticker)
+
+    user = get_user(user_id)
+    month = datetime.now().strftime('%Y-%m')
+
+    used = user.get('buy_requests_this_month', 0)
+    if user.get('buy_month') != month:
+        used = 0
+        set_user_field(user_id, 'buy_requests_this_month', 0)
+        set_user_field(user_id, 'buy_month', month)
+
+    if used >= 2:
+        return "[CRYPTO] ❌ Лимит 2 запроса в месяц.\nОсталось: 0"
+
+    # Отправляем запрос админу
+    today = datetime.now().strftime('%Y-%m-%d')
+    admin_msg = "[CRYPTO] 📩 /buy запрос\n\n"
+    admin_msg += "👤 User: {}\n".format(user_id)
+    admin_msg += "📊 Инструмент: {}\n".format(ticker)
+    admin_msg += "📅 Дата: {}\n".format(today)
+    send_message(ADMIN_CHAT_ID, admin_msg)
+
+    # Увеличиваем счётчик
+    set_user_field(user_id, 'buy_requests_this_month', used + 1)
+    set_user_field(user_id, 'buy_month', month)
+
+    msg = "[CRYPTO] 🛒 Запрос рекомендованной цены\n\n"
+    msg += "📊 Инструмент: {}\n".format(ticker)
+    msg += "📅 Дата: {}\n\n".format(today)
+    msg += "Запрос отправлен.\n"
+    msg += "Ответ придёт в течение дня.\n\n"
+    msg += "(осталось запросов в этом месяце: {})".format(2 - (used + 1))
+    return msg
+
+
+# ---------- MAIN LOOP ----------
+def process_updates(offset=None):
+    updates = get_updates(offset)
+    result = updates.get('result', [])
+    max_id = offset
+
+    for upd in result:
+        max_id = upd['update_id'] + 1
+
+        msg = upd.get('message')
+        if not msg:
+            continue
+
+        user_id = msg['from']['id']
+        text = msg.get('text', '').strip()
+        if not text:
+            continue
+
+        # Команда?
+        if text.startswith('/'):
+            parts = text.split()
+            cmd = parts[0].lower()
+            args = parts[1:]
+
+            if cmd == '/check':
+                response = handle_check(user_id, args)
+            elif cmd == '/find':
+                response = handle_find(user_id, args)
+            elif cmd == '/add':
+                response = handle_add(user_id, args)
+            elif cmd == '/buy':
+                response = handle_buy(user_id, args)
+            else:
+                response = handle_command(user_id, text)
+
+            if response:
+                send_message(user_id, response)
+            continue
+
+        # Сделка?
+        trade_msg = handle_trade(user_id, text)
+        if trade_msg:
+            send_message(user_id, trade_msg)
+            continue
+
+        # Не понял
+        send_message(user_id, "[CRYPTO] ❌ Не понимаю. Используйте /start.")
+
+    return max_id
+
+
+if __name__ == '__main__':
+    # Один проход (для GitHub Actions)
+    print("Bot: single poll...")
+    try:
+        process_updates()
+    except Exception as e:
+        print("Error: {}".format(e))
+    print("Bot: done.")
