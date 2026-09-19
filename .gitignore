@@ -42,3 +42,6 @@ coingecko_cache.json
 
 # User state (создаётся ботом)
 # user_state.json
+
+.env
+.env.local
