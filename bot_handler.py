@@ -970,10 +970,10 @@ def process_updates(offset=None):
     if offset:
         result = [u for u in result if u.get('update_id', 0) >= offset]
 
-    # Если слишком много — берём последние 3
-    if len(result) > 3:
-        print("Many updates: {}, берём последние 3".format(len(result)))
-        result = result[-3:]
+    # Обрабатываем все обновления (но не больше 10)
+    if len(result) > 10:
+        print("Many updates: {}, берём последние 10".format(len(result)))
+        result = result[-10:]
 
     for upd in result:
         max_id = upd['update_id'] + 1
