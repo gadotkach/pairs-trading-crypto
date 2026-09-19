@@ -391,7 +391,7 @@ def format_start(user_id):
         msg += "📨 Рассылка:\n"
         msg += "  • Только по 1 паре\n"
         msg += "  • Общие сигналы\n\n"
-        msg += "⭐ Для полного доступа — /priority CODE\n"
+        msg += "⭐ Для полного доступа — /priority\n"
 
     elif level == 'priority':
         msg += "⭐ Приоритетный доступ:\n"
