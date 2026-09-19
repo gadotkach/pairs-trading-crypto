@@ -307,6 +307,8 @@ def main():
                     'Дней': len(z),
                     'Мин Z': round(z.min(), 4),
                     'Макс Z': round(z.max(), 4),
+                    'sminZ': round(z.min(), 4),
+                    'smaxZ': round(z.max(), 4),
                     'Z средняя': round(z.mean(), 4),
                     'Mean-crossings': n_crossings,
                     'R2': round(r2, 4),
