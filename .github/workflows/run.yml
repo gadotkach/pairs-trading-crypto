@@ -1,9 +1,9 @@
 name: Pairs Trading Crypto
 
 on:
-  # Временно отключено
-  # schedule:
-  #   - cron: '0 * * * *'
+  schedule:
+    # Каждые 30 минут 24/7 (UTC)
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -36,10 +36,6 @@ jobs:
           python z_analytics_crypto.py
 
       - name: Run pairs_analysis
-        env:
-          TG_TOKEN: ${{ secrets.TG_TOKEN }}
-          TG_CHAT: ${{ secrets.TG_CHAT }}
-          TG_PROXY: ${{ secrets.TG_PROXY }}
         run: |
           python pairs_analysis_crypto.py
 
@@ -48,5 +44,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add state.json pair_strategies_analysis.xlsx analytics_z.xlsx cache/ || true
-          git diff --cached --quiet && echo "Нет изменений — коммит не нужен" || \
-            (git commit -m "Auto update [skip ci]" && git push)
+          git diff --cached --quiet && echo "Нет изменений — коммит не нужен" || (git commit -m "Auto update [skip ci]" && git push)

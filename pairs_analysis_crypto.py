@@ -49,7 +49,7 @@ TAX_RATE = 0.0
 TG_PROXY = os.environ.get("TG_PROXY", "https://tg-proxy.shvaboe.workers.dev")
 TG_TOKEN = os.environ.get("TG_TOKEN", "")
 TG_CHAT = os.environ.get("TG_CHAT", "")
-SEND_TELEGRAM = bool(TG_TOKEN and TG_CHAT)
+SEND_TELEGRAM = False  # Отключено (аналитика — через бота)
 
 # Префикс сообщений
 PREFIX = "[CRYPTO] "
