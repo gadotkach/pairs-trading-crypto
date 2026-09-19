@@ -42,7 +42,7 @@
       "level_expires_at": "2999-12-31T23:59:59",
       "pair_settings": {
         "DOT/XCH": {
-          "step": 5,
+          "step": 12,
           "strategy": "AB",
           "period": "1y"
         }
