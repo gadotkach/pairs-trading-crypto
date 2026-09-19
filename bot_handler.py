@@ -959,15 +959,21 @@ def process_updates(offset=None):
     result = updates.get('result', [])
     max_id = offset
 
-    # Если offset=None — пропускаем ВСЕ старые (первый запуск)
-    skip_old = (offset is None and len(result) > 0)
-
-    if skip_old:
-        # Только сохраняем max_id, не обрабатываем
+    # Первый запуск без offset — пропускаем всё
+    if offset is None and len(result) > 0:
         for upd in result:
             max_id = upd['update_id'] + 1
-        print("SKIP old updates: {}".format(len(result)))
+        print("SKIP old (first run): {}".format(len(result)))
         return max_id
+
+    # Фильтр: только те, что >= offset
+    if offset:
+        result = [u for u in result if u.get('update_id', 0) >= offset]
+
+    # Если слишком много — берём последние 3
+    if len(result) > 3:
+        print("Many updates: {}, берём последние 3".format(len(result)))
+        result = result[-3:]
 
     for upd in result:
         max_id = upd['update_id'] + 1
