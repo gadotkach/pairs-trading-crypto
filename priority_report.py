@@ -103,17 +103,29 @@ def main():
         if not pairs:
             continue
 
+        pair_settings = user.get('pair_settings', {})
+
         msg = "{}📊 Ежедневный отчёт".format(PREFIX) + "\n"
         msg += "📅 {}\n".format(datetime.now().strftime('%d.%m.%Y'))
 
         has_data = False
         for pair in pairs:
-            row5 = df5[(df5['Период'] == '3 года') & (df5['Пара'] == pair)]
-            row10 = df10[(df10['Период'] == '3 года') & (df10['Пара'] == pair)]
+            s = pair_settings.get(pair, {})
+            step = s.get('step', 5)
+            strategy = s.get('strategy', 'AB')
+            period = s.get('period', '1y')
+
+            # Определяем период (3 года — по умолчанию)
+            period_label = '3 года'
+
+            row5 = df5[(df5['Период'] == period_label) & (df5['Пара'] == pair)]
+            row10 = df10[(df10['Период'] == period_label) & (df10['Пара'] == pair)]
             if row5.empty:
                 continue
             r5 = row5.iloc[0]
             r10 = row10.iloc[0] if not row10.empty else None
+
+            msg += "\n⚙️ {} (STEP {}%, {}, {})\n".format(pair, step, strategy, period)
             msg += format_pair_msg(pair, r5, r10)
             has_data = True
 
