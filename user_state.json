@@ -39,7 +39,14 @@
       ],
       "buy_requests_this_month": 0,
       "buy_month": null,
-      "level_expires_at": "2999-12-31T23:59:59"
+      "level_expires_at": "2999-12-31T23:59:59",
+      "pair_settings": {
+        "DOT/XCH": {
+          "step": 5,
+          "strategy": "AB",
+          "period": "1y"
+        }
+      }
     }
   },
   "redeem_codes": {
