@@ -1,3 +1,24 @@
 {
-  "users": {}
+  "users": {
+    "380946555": {
+      "level": "basic",
+      "strategy": "AB",
+      "step": 5,
+      "period": {
+        "type": "years",
+        "value": 1
+      },
+      "subscriptions": {
+        "check": true,
+        "pair": true,
+        "signals": true
+      },
+      "my_tickers": [],
+      "trades": {},
+      "priority_pairs": [],
+      "keep_only": [],
+      "buy_requests_this_month": 0,
+      "buy_month": null
+    }
+  }
 }
