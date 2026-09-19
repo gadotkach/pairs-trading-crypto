@@ -149,6 +149,47 @@ def pay_menu_keyboard(level):
     return keyboard
 
 
+def format_priority_menu():
+    """Описание 3 уровней доступа."""
+    msg = "[CRYPTO] ⭐ Уровни доступа\n\n"
+
+    msg += "⭐ PRIORITY\n"
+    msg += "  • /pair BTC ETH (5/3/1 год)\n"
+    msg += "  • /check DOT XCH — анализ\n"
+    msg += "  • /find BTC — топ-5 пар\n"
+    msg += "  • /keep — фильтр (до 20 пар)\n"
+    msg += "  • Уведомления коридора\n"
+    msg += "  • Рассылка по 20 парам\n"
+    msg += "  💰 154 ⭐ / мес | 1478 ⭐ / год\n\n"
+
+    msg += "⭐⭐ SUPERPRIORITY\n"
+    msg += "  • Все функции Priority\n"
+    msg += "  • /add BTC NEWCOIN — добавить пару\n"
+    msg += "  • /period, /step, /strategy\n"
+    msg += "  • /keep без ограничений\n"
+    msg += "  💰 770 ⭐ / мес | 7392 ⭐ / год\n\n"
+
+    msg += "⭐⭐⭐ SSUPERPRIORITY\n"
+    msg += "  • Все функции Superpriority\n"
+    msg += "  • /buy BTC — цена (2/мес)\n"
+    msg += "  💰 3846 ⭐ / мес | 36922 ⭐ / год\n\n"
+
+    msg += "→ Нажмите на уровень ниже:"
+    return msg
+
+
+def priority_levels_keyboard():
+    """Inline-кнопки для выбора уровня."""
+    keyboard = {
+        'inline_keyboard': [
+            [{'text': '⭐ Priority — 154 ⭐', 'callback_data': 'show_priority'}],
+            [{'text': '⭐⭐ Superpriority — 770 ⭐', 'callback_data': 'show_superpriority'}],
+            [{'text': '⭐⭐⭐ SSuperpriority — 3846 ⭐', 'callback_data': 'show_ssuperpriority'}],
+        ]
+    }
+    return keyboard
+
+
 def reply_main_menu():
     """Reply-клавиатура (внизу, как на фото)."""
     keyboard = {
@@ -443,7 +484,7 @@ def format_start(user_id):
         msg += "📨 Рассылка:\n"
         msg += "  • Только по 1 паре\n"
         msg += "  • Общие сигналы\n\n"
-        msg += "⭐ Для полного доступа — /priority\n"
+
 
     elif level == 'priority':
         msg += "⭐ Приоритетный доступ:\n"
@@ -976,10 +1017,26 @@ def process_updates(offset=None):
             continue
 
         # Reply-кнопки (📊 Данные, 🔍 Проверить, ...)
+        # Reply-кнопка ⭐ Приоритет — отдельная обработка
+        if text == '⭐ Приоритет':
+            msg_text = format_priority_menu()
+            keyboard = priority_levels_keyboard()
+            url = "{}/bot{}/sendMessage".format(TG_PROXY, TG_TOKEN)
+            payload = {
+                "chat_id": user_id,
+                "text": msg_text,
+                "parse_mode": 'HTML',
+                "reply_markup": json.dumps(keyboard),
+            }
+            try:
+                requests.post(url, json=payload, timeout=30)
+            except Exception as e:
+                print("Error: {}".format(e))
+            continue
+
         reply_map = {
             '📊 Данные': '/pair',
             '🔍 Проверить': '/check',
-            '⭐ Приоритет': '/priority',
             '📋 Статус': '/status',
             '❓ Помощь': '/help',
         }
@@ -1133,7 +1190,56 @@ def handle_callback(user_id, data):
         return "[CRYPTO] 🔍 Введите пару:\n/check BTC ETH"
 
     if data == 'menu_priority':
-        return None  # Меню оплаты отдельно
+        return None
+
+    if data == 'show_priority':
+        msg_text = format_pay_menu('priority')
+        keyboard = pay_menu_keyboard('priority')
+        # Отправляем отдельно
+        url = "{}/bot{}/sendMessage".format(TG_PROXY, TG_TOKEN)
+        payload = {
+            "chat_id": user_id,
+            "text": msg_text,
+            "parse_mode": 'HTML',
+            "reply_markup": json.dumps(keyboard),
+        }
+        try:
+            requests.post(url, json=payload, timeout=30)
+        except Exception:
+            pass
+        return None
+
+    if data == 'show_superpriority':
+        msg_text = format_pay_menu('superpriority')
+        keyboard = pay_menu_keyboard('superpriority')
+        url = "{}/bot{}/sendMessage".format(TG_PROXY, TG_TOKEN)
+        payload = {
+            "chat_id": user_id,
+            "text": msg_text,
+            "parse_mode": 'HTML',
+            "reply_markup": json.dumps(keyboard),
+        }
+        try:
+            requests.post(url, json=payload, timeout=30)
+        except Exception:
+            pass
+        return None
+
+    if data == 'show_ssuperpriority':
+        msg_text = format_pay_menu('ssuperpriority')
+        keyboard = pay_menu_keyboard('ssuperpriority')
+        url = "{}/bot{}/sendMessage".format(TG_PROXY, TG_TOKEN)
+        payload = {
+            "chat_id": user_id,
+            "text": msg_text,
+            "parse_mode": 'HTML',
+            "reply_markup": json.dumps(keyboard),
+        }
+        try:
+            requests.post(url, json=payload, timeout=30)
+        except Exception:
+            pass
+        return None
 
     if data == 'menu_status':
         return format_status(user_id)
