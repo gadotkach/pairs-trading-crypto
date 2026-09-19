@@ -33,3 +33,12 @@ z_plots/
 
 # Временные
 notifications_today.txt
+
+# CoinGecko cache (большой, обновляется)
+coingecko_cache.json
+
+# Extended tickers (создаётся динамически)
+# extended_tickers.json
+
+# User state (создаётся ботом)
+# user_state.json
