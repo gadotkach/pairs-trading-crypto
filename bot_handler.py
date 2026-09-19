@@ -598,6 +598,41 @@ def format_help(user_id):
     return msg
 
 
+def format_filter(user_id):
+    """Показать активные пары + настройки."""
+    user = get_user(user_id)
+    level = user.get('level', 'basic')
+
+    msg = "[CRYPTO] 📋 Мои пары\n\n"
+
+    pp = user.get('priority_pairs', [])
+    if pp:
+        msg += "📨 Рассылка ({}):\n".format(len(pp))
+        for p in pp:
+            if isinstance(p, dict):
+                msg += "  • {} (STEP {}%, {})\n".format(
+                    p.get('pair'), p.get('step', 5), p.get('strategy', 'AB'))
+            else:
+                msg += "  • {}\n".format(p)
+    else:
+        msg += "📨 Рассылка: пусто\n"
+
+    ko = user.get('keep_only', [])
+    if ko:
+        msg += "\n🔒 Фильтр ({}):\n".format(len(ko))
+        for p in ko:
+            msg += "  • {}\n".format(p)
+
+    msg += "\n📊 Глобально:\n"
+    msg += "  STEP: {}%\n".format(user.get('step', 5))
+    msg += "  Стратегия: {}\n".format(user.get('strategy', 'AB'))
+    period = user.get('period', {})
+    msg += "  Период: {} {}\n".format(
+        period.get('type', 'years'), period.get('value', 1))
+
+    return msg
+
+
 def format_status(user_id):
     user = get_user(user_id)
     level = user.get('level', 'basic')
@@ -734,6 +769,11 @@ def handle_command(user_id, text):
 # ---------- ОБРАБОТКА СДЕЛКИ ----------
 def handle_trade(user_id, text):
     """Записывает сделку + добавляет в priority_pairs + отвечает."""
+    # Убираем /trade если есть
+    text = text.strip()
+    if text.startswith('/trade'):
+        text = text[len('/trade'):].strip()
+
     trade = parse_trade(text)
     if not trade:
         return None
@@ -1072,6 +1112,61 @@ def process_updates(offset=None):
             parts = text.split()
             cmd = parts[0].lower()
             args = parts[1:]
+
+            # /trade — ввод сделки
+            if cmd == '/trade':
+                trade_msg = handle_trade(user_id, text)
+                if trade_msg:
+                    send_message(user_id, trade_msg)
+                continue
+
+            # /filter — показать пары
+            elif cmd == '/filter':
+                msg_text = format_filter(user_id)
+                send_message(user_id, msg_text)
+                continue
+
+            # /clear — сброс или удаление пары
+            elif cmd == '/clear':
+                if not args:
+                    set_user_field(user_id, 'keep_only', [])
+                    send_message(user_id, "[CRYPTO] ✅ Фильтр сброшен (все пары).")
+                else:
+                    pair = parse_pair(' '.join(args))
+                    if pair:
+                        pair_str = pair_to_str(pair)
+                        user = get_user(user_id)
+                        ko = user.get('keep_only', [])
+                        if pair_str in ko:
+                            ko.remove(pair_str)
+                            set_user_field(user_id, 'keep_only', ko)
+                            send_message(user_id, "[CRYPTO] ✅ {} удалён из фильтра.".format(pair_str))
+                        else:
+                            send_message(user_id, "[CRYPTO] ❌ {} нет в фильтре.".format(pair_str))
+                    else:
+                        send_message(user_id, "[CRYPTO] ❌ Неверная пара.")
+                continue
+
+            # /remove — удалить из рассылки
+            elif cmd == '/remove':
+                if not args:
+                    send_message(user_id, "[CRYPTO] Введите: /remove BTC ETH")
+                else:
+                    pair = parse_pair(' '.join(args))
+                    if pair:
+                        pair_str = pair_to_str(pair)
+                        user = get_user(user_id)
+                        pp = user.get('priority_pairs', [])
+                        # pp может быть list of dict или list of str
+                        new_pp = [p for p in pp if (p.get('pair') if isinstance(p, dict) else p) != pair_str]
+                        if len(new_pp) < len(pp):
+                            set_user_field(user_id, 'priority_pairs', new_pp)
+                            send_message(user_id, "[CRYPTO] ✅ {} удалён из рассылки.".format(pair_str))
+                        else:
+                            send_message(user_id, "[CRYPTO] ❌ {} нет в рассылке.".format(pair_str))
+                    else:
+                        send_message(user_id, "[CRYPTO] ❌ Неверная пара.")
+                continue
 
             if cmd in ['/gencode', '/activate', '/codes']:
                 response = handle_admin_command(user_id, cmd, args)
