@@ -1,7 +1,7 @@
 {
   "users": {
     "380946555": {
-      "level": "basic",
+      "level": "superpriority",
       "strategy": "AB",
       "step": 5,
       "period": {
@@ -18,7 +18,8 @@
       "priority_pairs": [],
       "keep_only": [],
       "buy_requests_this_month": 0,
-      "buy_month": null
+      "buy_month": null,
+      "level_expires_at": "2999-12-31T23:59:59"
     }
   },
   "redeem_codes": {
@@ -40,8 +41,8 @@
       "level": "superpriority",
       "days": 0,
       "created_at": "2026-09-19T12:45:12.095499",
-      "used_by": null,
-      "used_at": null
+      "used_by": "380946555",
+      "used_at": "2026-09-19T12:47:56.056204"
     }
   }
 }
