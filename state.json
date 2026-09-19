@@ -46,7 +46,7 @@
     },
     "XCH/HBAR": {
       "min_z_10": 16.2106,
-      "max_z_10": 550.1123,
+      "max_z_10": 547.1235,
       "p_max_10": null,
       "p_min_10": null
     },
@@ -92,17 +92,17 @@
       "p_max_10": null,
       "p_min_10": null
     },
-    "DOT/TRX": {
-      "min_z_10": 2.2548,
-      "max_z_10": 86.5099,
-      "p_max_10": null,
-      "p_min_10": null
-    },
     "ADA/NEAR": {
       "min_z_10": 0.0571,
       "max_z_10": 0.3564,
       "p_max_10": 0.084,
       "p_min_10": 0.084
+    },
+    "DOT/TRX": {
+      "min_z_10": 2.2548,
+      "max_z_10": 86.5099,
+      "p_max_10": null,
+      "p_min_10": null
     },
     "DOT/XCH": {
       "min_z_10": 0.1477,
@@ -152,6 +152,12 @@
       "p_max_10": null,
       "p_min_10": null
     },
+    "XCH/TRX": {
+      "min_z_10": 3.4761,
+      "max_z_10": 384.1686,
+      "p_max_10": null,
+      "p_min_10": null
+    },
     "ICP/TRX": {
       "min_z_10": 6.269,
       "max_z_10": 165.427,
@@ -167,12 +173,6 @@
     "AAVE/ATOM": {
       "min_z_10": 8.0502,
       "max_z_10": 94.833,
-      "p_max_10": null,
-      "p_min_10": null
-    },
-    "XCH/TRX": {
-      "min_z_10": 3.4761,
-      "max_z_10": 384.1686,
       "p_max_10": null,
       "p_min_10": null
     },
@@ -194,6 +194,12 @@
       "p_max_10": null,
       "p_min_10": null
     },
+    "ADA/BNB": {
+      "min_z_10": 0.0003,
+      "max_z_10": 0.0025,
+      "p_max_10": 0.0025,
+      "p_min_10": 0.0003
+    },
     "DOT/NEAR": {
       "min_z_10": 0.378,
       "max_z_10": 3.8749,
@@ -205,12 +211,6 @@
       "max_z_10": 0.147,
       "p_max_10": 0.0304,
       "p_min_10": 0.0028
-    },
-    "ADA/BNB": {
-      "min_z_10": 0.0003,
-      "max_z_10": 0.0025,
-      "p_max_10": 0.0025,
-      "p_min_10": 0.0003
     },
     "ETH/NEAR": {
       "min_z_10": 370.6596,
@@ -350,12 +350,6 @@
       "p_max_10": null,
       "p_min_10": null
     },
-    "ATOM/HBAR": {
-      "min_z_10": 14.9004,
-      "max_z_10": 159.1733,
-      "p_max_10": null,
-      "p_min_10": null
-    },
     "BNB/HBAR": {
       "min_z_10": 1944.3966,
       "max_z_10": 13063.0441,
@@ -373,6 +367,12 @@
       "max_z_10": 0.0004,
       "p_max_10": 0.0004,
       "p_min_10": 0.0001
+    },
+    "ATOM/HBAR": {
+      "min_z_10": 14.9004,
+      "max_z_10": 161.0334,
+      "p_max_10": null,
+      "p_min_10": null
     },
     "ADA/HBAR": {
       "min_z_10": 1.9484,
@@ -407,18 +407,18 @@
     "ADA/LINK": {
       "min_z_10": 0.0185,
       "max_z_10": 0.0617,
-      "p_max_10": 0.0369,
+      "p_max_10": 0.0254,
       "p_min_10": 0.0238
-    },
-    "LINK/HBAR": {
-      "min_z_10": 59.2722,
-      "max_z_10": 278.0658,
-      "p_max_10": null,
-      "p_min_10": null
     },
     "ETH/HBAR": {
       "min_z_10": 8875.4805,
       "max_z_10": 60422.8588,
+      "p_max_10": null,
+      "p_min_10": null
+    },
+    "LINK/HBAR": {
+      "min_z_10": 59.2722,
+      "max_z_10": 278.0658,
       "p_max_10": null,
       "p_min_10": null
     },
@@ -471,5 +471,5 @@
       "p_min_10": null
     }
   },
-  "last_update": "2026-09-19T14:58:39.202361"
+  "last_update": "2026-09-19T17:45:32.702610"
 }
