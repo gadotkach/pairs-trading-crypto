@@ -35,6 +35,13 @@
       "created_at": "2026-09-19T12:26:08.660410",
       "used_by": null,
       "used_at": null
+    },
+    "SUPER-2026-0YHE": {
+      "level": "superpriority",
+      "days": 0,
+      "created_at": "2026-09-19T12:45:12.095499",
+      "used_by": null,
+      "used_at": null
     }
   }
 }
