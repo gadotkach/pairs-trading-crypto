@@ -19,35 +19,12 @@
 
 ---
 
-## СТРУКТУРА
+## РАСПИСАНИЕ
 
-pairs-trading-crypto/
-- fetch_crypto.py            - HTX + Bybit
-- z_analytics_crypto.py      - ZigZag 5%/10%, sminZ/smaxZ
-- pairs_analysis_crypto.py   - стратегия A/B (SEND_TELEGRAM=False)
-- tickers.py                 - BASE + EXTENDED
-- finance_api.py             - CoinGecko
-- subscription.py            - подписки, коды
-- bot_handler.py             - Telegram-бот (~1300 строк)
-- user_state.json            - per-user (users + redeem_codes)
-- extended_tickers.json      - добавленные тикеры
-- last_update_id.txt         - offset (обновляется Actions)
-- state.json                 - глобальный
-- .github/workflows/
-  - run.yml                  - cron */30 (без TG)
-  - bot.yml                  - cron */10 (single poll)
-
----
-
-## ПАРАМЕТРЫ
-
-- TICKERS: ADA, ICP, ETH, DOT, LINK, ZRO, AAVE, BTC, ATOM, NEAR, XCH, BNB, HBAR, TRX
-- Периоды: 5/3/1 год
-- INITIAL: $200
-- Комиссия: 0.4%
-- Фильтр ТОПа: Экстремумы >= 30 (5 -> 3 года)
-- min_days: int(n_days * 0.8)
-- SEND_TELEGRAM = False (аналитика через бота)
+| Workflow | Cron | Что делает |
+|---|---|---|
+| run.yml | */30 | fetch_crypto + z_analytics + pairs_analysis (без TG) |
+| bot.yml | */10 | bot_handler (опрос Telegram, ответы) |
 
 ---
 
@@ -60,15 +37,14 @@ pairs-trading-crypto/
 - ssuperpriority: + /buy (2/мес)
 
 ### Команды
-- /start — приветствие
-- /P — меню уровней (3 inline-кнопки)
-- /priority, /superpriority, /ssuperpriority — меню оплаты
-- /gencode LEVEL [DAYS] — админ
-- /activate USER_ID LEVEL [DAYS] — админ
-- /codes — админ
-- /redeem CODE — активировать
+- /start, /P, /help, /status
+- /pair, /check, /find, /add, /keep
+- /period, /step, /strategy
+- /priority, /superpriority, /ssuperpriority (оплата)
+- /gencode, /activate, /codes (админ)
+- /redeem CODE
 
-### Reply-меню (внизу)
+### Reply-меню
 📊 Данные | 🔍 Проверить
 ⭐ Приоритет | 📋 Статус
 ❓ Помощь
@@ -81,56 +57,35 @@ pairs-trading-crypto/
 | SSuperpriority | 3846 | 36922 |
 
 ### Коды
-- Формат: PRIO-2026-XXXX, SUPER-2026-XXXX, SS-2026-XXXX
-- Срок: 30 дней
-- Одноразовые
-- Хранение: user_state.json (ключ redeem_codes)
-
-### Технические
-- offset: last_update_id.txt (в репо, обновляется Actions)
-- bot.yml: cron */10, single poll
-- run.yml: cron */30 (цены + аналитика, БЕЗ TG)
-- 1 команда = 1 ответ (без дублей)
-
----
-
-## РАСПИСАНИЕ
-
-| Workflow | Cron | Что |
-|---|---|---|
-| run.yml | */30 | fetch_crypto + z_analytics + pairs_analysis (без TG) |
-| bot.yml | */10 | bot_handler (опрос Telegram) |
+- PRIO-2026-XXXX, SUPER-2026-XXXX, SS-2026-XXXX
+- 30 дней, одноразовые
+- Хранение: user_state.json (redeem_codes)
 
 ---
 
 ## СЕКРЕТЫ GITHUB
 
-- TG_TOKEN (бот)
-- TG_CHAT = 380946555
-- TG_PROXY = https://tg-proxy.shvaboe.workers.dev
+- TG_TOKEN, TG_CHAT, TG_PROXY
 - ADMIN_CHAT_ID = 380946555
 
 ---
 
 ## ВАЖНЫЕ ПРАВИЛА
 
-1. INITIAL = 200
+1. INITIAL = 200, комиссия 0.4%
 2. min_days = int(n_days * 0.8)
-3. Фильтр: если Старт X = Финал X ИЛИ Старт Y = Финал Y -> исключить
-4. Изменение, %: Финал X != 0 -> по X; Финал X = 0 -> по Y
-5. Пары: BTC ETH (через пробел)
+3. Фильтр: Старт X = Финал X ИЛИ Старт Y = Финал Y -> исключить
+4. Изменение, %: Финал X != 0 -> по X, иначе по Y
+5. Пары: BTC ETH (пробел)
 6. Ввод сделки: T1 P1 Q1 C1 T2 P2 Q2 C2
-7. Кэш: date,close
-8. Telegram: [CRYPTO] в начале
-9. Админ-команды: ADMIN_CHAT_ID
-10. Один ответ на команду (offset)
-11. Аналитика — только через бота (без авто-рассылки)
+7. SEND_TELEGRAM = False (аналитика через бота)
+8. offset: last_update_id.txt (в репо)
 
 ---
 
 ## ОСТАЛОСЬ
 
-1. priority_report.py — рассылка раз в день в 09:00 МСК
+1. priority_report.py — рассылка в 09:00 МСК
 2. CryptoBot — Этап 2
 3. ЮKassa — Этап 3
 
