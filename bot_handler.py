@@ -23,9 +23,6 @@ TG_TOKEN = os.environ.get("TG_TOKEN", "")
 TG_CHAT = os.environ.get("TG_CHAT", "")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID", TG_CHAT)
 
-PRIORITY_CODE = os.environ.get("PRIORITY_CODE", "")
-SUPERPRIORITY_CODE = os.environ.get("SUPERPRIORITY_CODE", "")
-SSUPERPRIORITY_CODE = os.environ.get("SSUPERPRIORITY_CODE", "")
 
 STATE_FILE = 'user_state.json'
 ANALYTICS_FILE = 'analytics_z.xlsx'
@@ -497,8 +494,7 @@ def format_start(user_id):
         msg += "📨 Рассылка:\n"
         msg += "  • Отдельно по каждой паре (до 20)\n"
         msg += "  • Рекомендация старта\n"
-        msg += "  • Уведомления коридора\n\n"
-        msg += "⭐⭐ Расширение — /superpriority CODE\n"
+        msg += "  • Уведомления коридора\n"
 
     elif level == 'superpriority':
         msg += "⭐⭐ Супер-приоритетный доступ:\n"
@@ -507,8 +503,7 @@ def format_start(user_id):
         msg += "  • /period, /step, /strategy\n"
         msg += "  • /keep (без ограничений)\n\n"
         msg += "📨 Рассылка:\n"
-        msg += "  • Неограниченное количество пар\n\n"
-        msg += "⭐⭐⭐ Расширение — /ssuperpriority CODE\n"
+        msg += "  • Неограниченное количество пар\n"
 
     elif level == 'ssuperpriority':
         msg += "⭐⭐⭐ СС-приоритетный доступ:\n"
@@ -553,11 +548,6 @@ def format_help(user_id):
     if is_ss(user_id):
         msg += "\n📋 Команды (ssuperpriority):\n"
         msg += "  /buy BTC — рекомендованная цена (2/мес)\n"
-
-    msg += "\n📋 Активация:\n"
-    msg += "  /priority CODE\n"
-    msg += "  /superpriority CODE\n"
-    msg += "  /ssuperpriority CODE\n"
 
     return msg
 
@@ -626,36 +616,6 @@ def handle_command(user_id, text):
     # /status
     if cmd == '/status':
         return format_status(user_id)
-
-    # /priority CODE
-    if cmd == '/priority':
-        if not args:
-            return "[CRYPTO] Введите код: /priority CODE"
-        code = args[0]
-        if PRIORITY_CODE and code == PRIORITY_CODE:
-            set_user_field(user_id, 'level', 'priority')
-            return "[CRYPTO] ⭐ Приоритет активирован!"
-        return "[CRYPTO] ❌ Неверный код."
-
-    # /superpriority CODE
-    if cmd == '/superpriority':
-        if not args:
-            return "[CRYPTO] Введите код: /superpriority CODE"
-        code = args[0]
-        if SUPERPRIORITY_CODE and code == SUPERPRIORITY_CODE:
-            set_user_field(user_id, 'level', 'superpriority')
-            return "[CRYPTO] ⭐⭐ Супер-приоритет активирован!"
-        return "[CRYPTO] ❌ Неверный код."
-
-    # /ssuperpriority CODE
-    if cmd == '/ssuperpriority':
-        if not args:
-            return "[CRYPTO] Введите код: /ssuperpriority CODE"
-        code = args[0]
-        if SSUPERPRIORITY_CODE and code == SSUPERPRIORITY_CODE:
-            set_user_field(user_id, 'level', 'ssuperpriority')
-            return "[CRYPTO] ⭐⭐⭐ СС-приоритет активирован!"
-        return "[CRYPTO] ❌ Неверный код."
 
     # /pair BTC ETH
     if cmd == '/pair':
@@ -878,7 +838,7 @@ def handle_find(user_id, args):
 # ---------- /add ----------
 def handle_add(user_id, args):
     if not is_super(user_id):
-        return "[CRYPTO] ❌ /add — только для superpriority+.\n→ /superpriority CODE"
+        return "[CRYPTO] ❌ /add — только для superpriority+.\n→ /P — Уровни доступа"
 
     if len(args) < 2:
         return "[CRYPTO] Введите: /add BTC NEWCOIN"
@@ -911,7 +871,7 @@ def handle_add(user_id, args):
 # ---------- /buy ----------
 def handle_buy(user_id, args):
     if not is_ss(user_id):
-        return "[CRYPTO] ❌ /buy — только для ssuperpriority.\n→ /ssuperpriority CODE"
+        return "[CRYPTO] ❌ /buy — только для ssuperpriority.\n→ /P — Уровни доступа"
 
     if not args:
         return "[CRYPTO] Введите: /buy BTC"
